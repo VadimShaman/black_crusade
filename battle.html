@@ -4,33 +4,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель Сражения | Black Crusade Hub</title>
+    <title>Панель Сражения | Black Crusade</title>
     <link rel="stylesheet" href="/black_crusade/css/style.css">
-    <script>
-        window.VITE_FIREBASE_API_KEY = "AIzaSyBVFjbiXDIQbgntZYeEDY3nB63zs8Q4gNk";
-        // ... (остальные переменные без изменений)
-    </script>
+    <style>
+        /* Дополнительные стили для боевого стола */
+        .battle-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .battle-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .combatant-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .combatant-card:hover {
+            border-color: var(--accent-glow);
+        }
+
+        .combatant-card.active-turn {
+            border-left: 4px solid var(--accent-glow);
+            background: #1a0a0a;
+        }
+
+        .combatant-card.dead {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        .hp-bar {
+            background: #2a1a1a;
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 4px;
+        }
+
+        .hp-fill {
+            background: var(--primary-red);
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .log-viewport {
+            height: 300px;
+            overflow-y: auto;
+            background: #080505;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-size: 13px;
+            font-family: var(--font-mono);
+        }
+
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .log-entry .time {
+            color: #554444;
+            margin-right: 10px;
+        }
+
+        .log-entry.damage {
+            color: #cc4444;
+        }
+
+        .log-entry.system {
+            color: #6688aa;
+        }
+
+        .log-entry.critical {
+            color: #ff8800;
+            font-weight: bold;
+        }
+
+        .dice-roll {
+            display: inline-block;
+            background: #1a1a2a;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #ffcc44;
+            margin: 0 4px;
+        }
+
+        .notes-area {
+            width: 100%;
+            height: 150px;
+            background: #0a0808;
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .btn-roll {
+            background: #2a1a3a;
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .btn-roll:hover {
+            border-color: var(--accent-glow);
+        }
+
+        .btn-roll:active {
+            transform: scale(0.95);
+        }
+    </style>
 </head>
 
 <body class="grimdark-bg">
-    <div class="battle-container">
-        <header class="battle-header">
-            <h1 id="battle-title" class="gothic-text">Загрузка данных сражения...</h1>
+
+    <div class="battle-container" style="max-width:1400px; margin:0 auto; padding:20px;">
+        <header class="battle-header"
+            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:2px solid var(--primary-red); padding-bottom:16px; margin-bottom:20px;">
+            <h1 id="battle-title" class="gothic-text" style="color:var(--accent-glow);">⚔️ Загрузка сражения...</h1>
+            <div>
+                <span id="battle-id-display" style="color:#887777; font-size:14px; margin-right:16px;">ID: —</span>
+                <button class="tab-btn" id="roll-init-btn">🎲 Инициатива</button>
+                <button class="tab-btn" id="next-turn-btn">⏩ След. ход</button>
+                <a href="/black_crusade/index.html" class="tab-btn" style="background:#4a0000;">◀ Выйти</a>
+            </div>
         </header>
 
-        <main>
-            <section class="battle-main">
-                <div class="battle-log-container">
-                    <h3 class="sub-title">Лог Сражения</h3>
-                    <div id="battle-log" class="log-viewport"></div>
+        <div class="battle-grid">
+            <!-- Левая колонка: Участники + Заметки -->
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3>👥 Участники</h3>
+                    <div>
+                        <button class="tab-btn" id="add-npc-btn" style="padding:4px 12px;">+ NPC</button>
+                        <button class="tab-btn" id="add-player-btn" style="padding:4px 12px;">+ Игрок</button>
+                    </div>
                 </div>
-            </section>
-        </main>
+                <div id="combatants-list" style="max-height:400px; overflow-y:auto;">
+                    <div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>
+                </div>
 
-        <footer class="battle-footer">
-            <a href="/black_crusade/index.html" class="back-link">◀ Выйти из боя и вернуться в Главный Хаб</a>
-        </footer>
+                <div style="margin-top:20px;">
+                    <h4>📝 Заметки GM</h4>
+                    <textarea id="gm-notes" class="notes-area" placeholder="Заметки по бою..."></textarea>
+                    <button class="tab-btn" id="save-notes-btn" style="margin-top:8px;">💾 Сохранить</button>
+                </div>
+            </div>
+
+            <!-- Центр: Лог + Калькулятор -->
+            <div>
+                <div style="margin-bottom:16px;">
+                    <h3>📜 Лог сражения</h3>
+                    <div id="battle-log" class="log-viewport">
+                        <div style="color:#554444; text-align:center; padding:20px;">Ожидание подключения...</div>
+                    </div>
+                </div>
+
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); padding:16px; border-radius:4px;">
+                    <h4>🎯 Калькулятор атаки</h4>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                        <select id="attacker-select" style="flex:1; min-width:120px;">
+                            <option value="">Атакующий</option>
+                        </select>
+                        <span style="align-self:center;">➔</span>
+                        <select id="defender-select" style="flex:1; min-width:120px;">
+                            <option value="">Цель</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                        <select id="weapon-select" style="flex:1; min-width:120px;">
+                            <option value="Кулак">Кулак</option>
+                            <option value="Когти">Когти</option>
+                            <option value="Мясницкий тесак">Мясницкий тесак</option>
+                            <option value="Ритуальный нож">Ритуальный нож</option>
+                            <option value="Огненные когти">Огненные когти</option>
+                            <option value="Автопистолет">Автопистолет</option>
+                        </select>
+                        <input type="number" id="modifier-input" value="0" placeholder="Мод" style="width:80px;">
+                        <label style="font-size:13px; color:#887777;"><input type="checkbox" id="full-attack-check">
+                            +10</label>
+                        <label style="font-size:13px; color:#887777;"><input type="checkbox" id="all-out-check">
+                            +30</label>
+                    </div>
+                    <button class="tab-btn" id="attack-btn" style="width:100%; background:#4a0000; padding:10px;">💥
+                        Атаковать!</button>
+                    <div id="attack-result"
+                        style="margin-top:12px; padding:12px; background:#080505; border-radius:4px; display:none;">
+                    </div>
+                </div>
+
+                <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+                    <button class="btn-roll" id="dice-d100">🎲 d100</button>
+                    <button class="btn-roll" id="dice-d10">🎲 d10</button>
+                    <button class="btn-roll" id="dice-d5">🎲 d5</button>
+                    <button class="btn-roll" id="dice-custom">🎲 dX</button>
+                    <input type="number" id="dice-custom-input" value="20"
+                        style="width:60px; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:4px 8px; border-radius:4px;">
+                </div>
+            </div>
+
+            <!-- Правая колонка: Информация -->
+            <div>
+                <h3>📊 Статистика</h3>
+                <div
+                    style="background:var(--bg-card); border:1px solid var(--border-color); padding:16px; border-radius:4px;">
+                    <p><strong>Раунд:</strong> <span id="turn-display">0</span></p>
+                    <p><strong>Текущий ход:</strong> <span id="current-turn-display">—</span></p>
+                    <p><strong>Всего участников:</strong> <span id="total-combatants">0</span></p>
+                    <p><strong>Активных:</strong> <span id="active-combatants">0</span></p>
+                    <p><strong>Счётчик убийств:</strong> <span id="kill-counter">0</span></p>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Firebase и модули -->
+    <script type="importmap">
+{
+    "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+    }
+}
+</script>
 
     <script type="module" src="/black_crusade/js/battle-init.js"></script>
 </body>

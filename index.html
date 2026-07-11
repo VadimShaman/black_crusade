@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +15,42 @@
         window.VITE_FIREBASE_APP_ID = "1:666897001453:web:0be0f79154f8e10b4115e4";
     </script>
 </head>
+
 <body class="grimdark-bg">
+    <div id="guide-tab" class="tab-content" style="display: none;">
+        <h2>📜 Полные правила Black Crusade</h2>
+        <p>Сводка ключевых механик для быстрого доступа.</p>
+
+        <details>
+            <summary><strong>1. Базовый тест</strong></summary>
+            <p><strong>Формула:</strong> Характеристика + Бонус Навыка + Модификаторы = <strong>Предел</strong></p>
+            <p><strong>Бросок:</strong> 1d100 ≤ Предел → Успех</p>
+            <p><strong>Криты:</strong> 1-5 → Крит. Успех, 96-100 → Крит. Провал</p>
+        </details>
+        <details>
+            <summary><strong>2. Бой</strong></summary>
+            <p><strong>Инициатива:</strong> 1d10 + Ag.b</p>
+            <p><strong>Действия:</strong> 2 ОД за ход. Атака — 1 ОД, Полная атака — 2 ОД (+30).</p>
+        </details>
+        <details>
+            <summary><strong>3. Стрельба</strong></summary>
+            <p><strong>Одиночный:</strong> BS+10, 1 попадание</p>
+            <p><strong>Очередь:</strong> BS+0, 1 попадание за нечётный Успех</p>
+        </details>
+        <details>
+            <summary><strong>4. Статусы</strong></summary>
+            <ul>
+                <li><strong>Оглушён:</strong> не может действовать</li>
+                <li><strong>Кровотечение:</strong> 1d10 в конце хода</li>
+                <li><strong>Горение:</strong> 1d10 E урона/ход</li>
+            </ul>
+        </details>
+        <details>
+            <summary><strong>5. Демоны</strong></summary>
+            <p><strong>Истинная форма:</strong> 1d10 + 2×W.b – Inf.b раундов</p>
+            <p><strong>Вселение (труп):</strong> 1d5 + 2×W.b – Inf.b дней</p>
+        </details>
+    </div>
     <div class="tabs-container" style="margin-bottom: 20px;">
         <button class="tab-btn active" onclick="openTab(event, 'tracker-tab')">Трекер боя</button>
         <button class="tab-btn" onclick="openTab(event, 'guide-tab')">Гайд</button>
@@ -52,4 +88,5 @@
         }
     </script>
 </body>
+
 </html>
