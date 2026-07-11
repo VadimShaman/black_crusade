@@ -3,30 +3,29 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// Безопасная проверка окружения, чтобы избежать ошибки "Cannot read properties of undefined"
-const getEnv = (key) => {
-    try {
-        if (typeof import.meta !== 'undefined' && import.meta.env) {
-            return import.meta.env[key];
-        }
-    } catch (e) {
-        // Игнорируем ошибку в средах, где import.meta не поддерживается базовым браузером
+// Прямое и безопасное извлечение переменных для Vite
+const getEnvValue = (viteValue, windowKey) => {
+    if (typeof viteValue !== 'undefined' && viteValue !== '') {
+        return viteValue;
     }
-    return window[key] || "";
+    if (typeof window !== 'undefined' && window[windowKey]) {
+        return window[windowKey];
+    }
+    return "";
 };
 
 const firebaseConfig = {
-    apiKey: getEnv("VITE_FIREBASE_API_KEY"),
-    authDomain: getEnv("VITE_FIREBASE_AUTH_DOMAIN"),
-    projectId: getEnv("VITE_FIREBASE_PROJECT_ID"),
-    storageBucket: getEnv("VITE_FIREBASE_STORAGE_BUCKET"),
-    messagingSenderId: getEnv("VITE_FIREBASE_MESSAGING_SENDER_ID"),
-    appId: getEnv("VITE_FIREBASE_APP_ID")
+    apiKey: getEnvValue(import.meta.env.VITE_FIREBASE_API_KEY, "VITE_FIREBASE_API_KEY"),
+    authDomain: getEnvValue(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, "VITE_FIREBASE_AUTH_DOMAIN"),
+    projectId: getEnvValue(import.meta.env.VITE_FIREBASE_PROJECT_ID, "VITE_FIREBASE_PROJECT_ID"),
+    storageBucket: getEnvValue(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, "VITE_FIREBASE_STORAGE_BUCKET"),
+    messagingSenderId: getEnvValue(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, "VITE_FIREBASE_MESSAGING_SENDER_ID"),
+    appId: getEnvValue(import.meta.env.VITE_FIREBASE_APP_ID, "VITE_FIREBASE_APP_ID")
 };
 
-// Проверяем, удалось ли загрузить конфигурацию
+// Проверяем конфигурацию
 if (!firebaseConfig.apiKey) {
-    console.warn("⚠️ Внимание: Конфигурация Firebase пуста. Если вы запускаете сайт локально, убедитесь, что ключи подгружены.");
+    console.warn("⚠️ Внимание: Конфигурация Firebase пуста. Проверьте секреты в GitHub Репозитории.");
 }
 
 const app = initializeApp(firebaseConfig);
