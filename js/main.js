@@ -1,4 +1,3 @@
-// js/main.js
 import {
     db, collection, addDoc, onSnapshot, query, where, doc, updateDoc, deleteDoc, serverTimestamp
 } from './firebase-config.js';

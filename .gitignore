@@ -3,8 +3,6 @@
 *.tmp
 .firebase/
 firebase-debug.log
-.firebase/
-firebase-config.js
 
 # Node / npm
 node_modules/
