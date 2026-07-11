@@ -22,24 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Vite
-        run: npm install -g vite
-
-      - name: Build with Vite
-        run: vite build --base=/black_crusade/
-
-      - name: Copy battle.html to dist
-        run: cp battle.html dist/
+      - name: Copy battle.html to root (already there)
+        run: ls -la
 
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./ # ← загружаем всю папку, а не dist
 
       - uses: actions/deploy-pages@v4
         id: deployment
