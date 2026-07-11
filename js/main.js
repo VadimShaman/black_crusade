@@ -1,41 +1,28 @@
-import { db, collection, addDoc, onSnapshot, query, where, serverTimestamp } from './firebase-config.js';
+// js/main.js
+import { db, collection, onSnapshot, query, where } from './firebase-config.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("🔥 Black Crusade Hub загружен!");
+const battlesList = document.getElementById('active-battles-list');
 
-    // Логика отображения списка боев
-    const battlesList = document.getElementById('active-battles-list');
-    if (battlesList) {
-        const q = query(collection(db, 'battles'), where('isActive', '==', true));
-        onSnapshot(q, (snapshot) => {
-            let html = '';
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                html += `
-                    <div style="padding:10px; border-bottom:1px solid #333;">
-                        <strong>${data.name}</strong>
-                        <button onclick="window.location.href='battle.html?id=${doc.id}'">Войти</button>
-                    </div>`;
-            });
-            battlesList.innerHTML = html || 'Активных боёв нет.';
+if (battlesList) {
+    console.log("DEBUG: Подписка на коллекцию battles...");
+    const q = query(collection(db, 'battles'), where('isActive', '==', true));
+    
+    onSnapshot(q, (snapshot) => {
+        console.log("DEBUG: Получено документов:", snapshot.size);
+        
+        if (snapshot.empty) {
+            battlesList.innerHTML = '<p style="color:red;">База пуста или нет активных боёв.</p>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            console.log("DEBUG: Рендер боя:", data.name);
+            html += `<div class="battle-card">Бой: ${data.name}</div>`;
         });
-    }
-
-    // Логика создания боя
-    const createBtn = document.getElementById('btn-create-battle');
-    const input = document.getElementById('battle-name-input');
-
-    if (createBtn) {
-        createBtn.addEventListener('click', async () => {
-            const name = input ? input.value.trim() : "Без названия";
-            try {
-                await addDoc(collection(db, 'battles'), {
-                    name: name,
-                    isActive: true,
-                    createdAt: serverTimestamp()
-                });
-                alert("Бой создан!");
-            } catch (e) { console.error("Ошибка Firebase:", e); }
-        });
-    }
-});
+        battlesList.innerHTML = html;
+    });
+} else {
+    console.error("DEBUG: Элемент #active-battles-list НЕ НАЙДЕН в HTML!");
+}
