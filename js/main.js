@@ -15,14 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
+                    // Найдите этот блок в main.js и замените на этот:
                     html += `
-                        <div class="battle-card" style="background: rgba(255,255,255,0.05); padding: 12px; border: 1px solid #4a0000; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #fff; font-weight: bold;">⚔️ ${data.name || 'Безымянный конфликт'}</span>
-                            <div>
-                                <button onclick="window.location.href='/battle.html?id=${docSnap.id}'">Войти</button>
-                                <button onclick="window.deleteBattle('${docSnap.id}')" style="background:#400; color:#fff; border:none; margin-left:5px; cursor:pointer;">Удалить</button>
-                            </div>
-                        </div>`;
+    <div class="battle-card" style="border:1px solid #4a0000; padding:10px; margin:5px 0;">
+        <span>⚔️ ${data.name || 'Безымянный конфликт'}</span>
+        <button onclick="window.location.href='/battle.html?id=${doc.id}'">Войти</button>
+        <button onclick="window.deleteBattle('${doc.id}')" style="background:#400;">Удалить</button>
+    </div>`;
                 });
             }
             battlesList.innerHTML = html + '</div>';
