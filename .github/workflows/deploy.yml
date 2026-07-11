@@ -29,11 +29,9 @@ jobs:
         with:
           node-version: 20
 
-      # Робот сам установит Vite глобально в виртуальной машине, package.json больше не нужен
       - name: Install Vite Global
         run: npm install -g vite
 
-      # Собираем проект, жестко вшивая секреты прямо в файлы дистрибутива
       - name: Build project with Vite
         run: vite build --base=/black_crusade/
         env:
