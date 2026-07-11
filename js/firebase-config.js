@@ -19,7 +19,4 @@ const auth = getAuth(app);
 
 signInAnonymously(auth).catch((err) => console.warn("Варп-ошибка:", err));
 
-// ВОТ ЭТОТ СПИСОК РЕШАЕТ ПРОБЛЕМУ MISSING_EXPORT
-export { 
-    db, auth, collection, addDoc, onSnapshot, query, where, doc, updateDoc, deleteDoc, serverTimestamp 
-};
+export { db, auth, collection, addDoc, onSnapshot, query, where, doc, updateDoc, deleteDoc, serverTimestamp };
