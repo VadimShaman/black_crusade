@@ -1,280 +1,359 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Black Crusade — Боевая комната</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Black Crusade: Chaos Hub</title>
     <style>
-        /* Дополнительные стили для боевой комнаты */
-        .battle-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border-color);
+        :root {
+            --bg-dark: #0f0a0a;
+            --bg-card: #171010;
+            --primary-red: #8b0000;
+            --accent-glow: #ff3333;
+            --text-light: #ccc;
+            --border-color: #3a2222;
         }
 
-        .battle-header h2 {
-            color: var(--accent-glow);
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--primary-red);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary-red);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(139, 0, 0, 0.7);
             margin: 0;
         }
 
-        .char-item {
+        /* Навигация по вкладкам */
+        .tabs-nav {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .char-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .char-item.active-turn {
-            background: rgba(204, 51, 0, 0.2);
-            border-left: 3px solid var(--accent-glow);
-        }
-
-        .char-item.dead {
-            opacity: 0.35;
-            text-decoration: line-through;
-        }
-
-        .char-name {
-            font-weight: bold;
-        }
-
-        .char-wounds {
-            font-size: 13px;
-            color: #887777;
-        }
-
-        .char-wounds.low {
-            color: #cc4444;
-        }
-
-        .status-badge {
-            font-size: 11px;
-            padding: 2px 10px;
-            border-radius: 12px;
-            background: #1a1414;
-        }
-
-        .status-badge.dead {
-            background: #4a0000;
-            color: #cc4444;
-        }
-
-        .status-badge.critical {
-            background: #4a2a00;
-            color: #ff8800;
-        }
-
-        .calc-panel {
-            background: rgba(255, 255, 255, 0.02);
-            padding: 16px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-        }
-
-        .calc-result {
-            margin-top: 12px;
-            padding: 12px;
-            background: #080505;
-            border-radius: 4px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .calc-result .hit {
-            color: #66aa66;
-        }
-
-        .calc-result .miss {
-            color: #cc4444;
-        }
-
-        .calc-result .crit {
-            color: #ff8800;
-            font-weight: bold;
-        }
-
-        .btn-attack {
-            background: #4a0000;
-            border-color: #7a0000;
-            padding: 8px 20px;
-        }
-
-        .btn-attack:hover {
-            background: #7a0000;
-            border-color: var(--accent-glow);
-        }
-
-        .flex-row {
-            display: flex;
-            gap: 12px;
-            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
         }
 
-        .flex-row select,
-        .flex-row input {
-            flex: 1;
-            min-width: 100px;
+        .tab-btn {
+            background-color: var(--bg-card);
+            color: #888;
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
         }
 
-        .flex-row label {
-            font-size: 12px;
-            color: #887777;
+        .tab-btn:hover {
+            border-color: var(--accent-glow);
+            color: var(--text-light);
         }
 
-        .log-entry .time {
-            color: #554444;
-            margin-right: 8px;
+        .tab-btn.active {
+            background-color: var(--primary-red);
+            color: #fff;
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.6);
         }
 
-        .log-entry.damage {
-            border-left: 2px solid #cc4444;
-            padding-left: 8px;
+        .tab-content {
+            display: none;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 4px;
         }
 
-        .log-entry.system {
-            border-left: 2px solid #446688;
-            padding-left: 8px;
+        .tab-content.active {
+            display: block;
         }
 
-        .log-entry.critical {
-            border-left: 2px solid #ff8800;
-            padding-left: 8px;
-        }
-
-        .battle-info {
+        /* Таблицы и списки */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
             font-size: 14px;
-            line-height: 1.8;
         }
 
-        .battle-info strong {
-            color: #aaa;
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--primary-red);
+            color: #fff;
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .grid-two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .section-block {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        h2, h3, h4 {
+            color: var(--accent-glow);
+            margin-top: 0;
+        }
+
+        input[type="text"], input[type="number"], select {
+            background-color: #000;
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-glow);
+        }
+
+        ul { padding-left: 20px; }
+        li { margin-bottom: 5px; }
+
+        @media (max-width: 900px) {
+            .grid-two { grid-template-columns: 1fr; }
         }
     </style>
 </head>
-
 <body>
 
-    <div class="container" style="max-width:1400px; margin:0 auto;">
+<header>
+    <h1>✦ BLACK CRUSADE: DAEMON HUB ✦</h1>
+    <p>Панель управления Хаосом, инициативой и кодексами правил</p>
+</header>
 
-        <!-- Шапка боевой комнаты -->
-        <div class="battle-header">
-            <h2>⚔️ <span id="battleNameDisplay">Бой</span></h2>
-            <div class="flex-row" style="gap:8px;">
-                <button class="tab-btn" id="rollInitiativeBtn">🎲 Инициатива</button>
-                <button class="tab-btn" id="nextTurnBtn">⏩ Следующий ход</button>
-                <button class="tab-btn btn-danger" id="finishBattleBtn">⛔ Завершить</button>
-                <button class="tab-btn" id="exportBtn">📥 Экспорт</button>
-                <button class="tab-btn" id="importBtn">📤 Импорт</button>
-                <input type="file" id="importFile" accept=".json" style="display:none;">
-                <a href="index.html" class="tab-btn">🏠 Выход</a>
-            </div>
-        </div>
+<div class="tabs-nav">
+    <button class="tab-btn active" onclick="openTab(event, 'tracker-tab')">🩸 Боевой Трекер</button>
+    <button class="tab-btn" onclick="openTab(event, 'rules-tab')">📜 Шпаргалка по Боевке</button>
+    <button class="tab-btn" onclick="openTab(event, 'demons-tab')">😈 Демоны и Завеса</button>
+</div>
 
-        <!-- Статус и ID боя -->
-        <div style="margin-bottom:16px; font-size:13px; color:#554444;">
-            ID боя: <span id="battleIdDisplay" style="font-family:monospace;">—</span>
-            | Раунд: <span id="turnDisplay">0</span>
-            | Ход: <span id="currentTurnDisplay">—</span>
-            | Активных: <span id="activeChars">0</span>
-        </div>
+<div id="tracker-tab" class="tab-content active">
+    <div id="battle-setup" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 4px;">
+        <input type="text" id="battle-name-input" placeholder="Название боя (например: Осада)">
+        <button class="tab-btn" id="btn-create-battle" style="color:#fff;">🔥 Создать Бой</button>
+        <span style="margin: 0 10px; color: #555;">или</span>
+        <input type="text" id="battle-id-input" placeholder="ID комнаты Firebase">
+        <button class="tab-btn" id="btn-connect-battle" style="color:#fff;">🔗 Подключиться</button>
+    </div>
 
-        <!-- Основная сетка -->
+    <div id="battle-workspace" style="display: none;">
+        <h3 style="color: var(--accent-glow)">Текущая битва: <span id="battle-id-display" style="font-family: monospace; color: #fff;">-</span></h3>
+        
         <div class="grid-two">
-            <!-- Левая колонка: персонажи и инициатива -->
             <div>
-                <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-                    <select id="npcTemplateSelect" style="flex:1;">
-                        <option value="cultist">Культист</option>
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <button class="tab-btn" id="btn-roll-init" style="color:#fff;">🎲 Перебросить Инициативу</button>
+                    <button class="tab-btn" id="btn-next-turn" style="background-color: var(--primary-red); color:#fff;">⏳ Следующий ход</button>
+                </div>
+                
+                <h4 style="margin-top: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--accent-glow);">Призвать NPC:</h4>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <select id="npc-template-select" style="flex: 1;">
+                        <option value="cultist">Культист Хаоса</option>
                         <option value="beastman">Зверолюд</option>
-                        <option value="albino">Альбинос (босс)</option>
-                        <option value="flamingPredator">Пылающий Хищник</option>
-                        <option value="gregor">Грегор Мясник</option>
+                        <option value="albino">Мутант-Альбинос</option>
+                        <option value="warp_stalker">Варп-зверь</option>
                     </select>
-                    <button class="tab-btn" id="addNpcBtn">➕ NPC</button>
-                    <button class="tab-btn" id="addPlayerBtn">➕ Игрок</button>
+                    <button class="tab-btn" id="btn-add-npc" style="color:#fff;">+ Добавить</button>
                 </div>
 
-                <h4 style="border-bottom:1px solid var(--border-color); padding-bottom:6px;">👥 Очередь инициативы</h4>
-                <div id="initiativeList" class="init-list">
-                    <span style="color:#554444;">Нет персонажей</span>
-                </div>
-
-                <div style="margin-top:12px; background:rgba(255,255,255,0.02); padding:12px; border-radius:4px;">
-                    <div style="font-size:13px; color:#887777;">💡 Нажми на персонажа, чтобы выбрать его для атаки</div>
+                <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Очередь Инициативы:</h4>
+                <div id="initiative-list" style="background: #000; padding: 15px; border: 1px solid var(--border-color); min-height: 100px;">
+                    <p style="color:#555;">Очередь пуста. Создайте бой для инициализации.</p>
                 </div>
             </div>
 
-            <!-- Правая колонка: калькулятор + лог -->
             <div>
-                <!-- Калькулятор атаки -->
-                <div class="calc-panel">
-                    <h4 style="margin-top:0;">⚔️ Калькулятор атаки</h4>
-                    <div class="flex-row">
-                        <select id="attackerSelect">
-                            <option value="">Атакующий</option>
-                        </select>
-                        <span>➔</span>
-                        <select id="defenderSelect">
-                            <option value="">Цель</option>
-                        </select>
+                <h4 style="color: var(--accent-glow);">⚔️ Расчет удара:</h4>
+                <div style="background: rgba(255,255,255,0.01); padding: 15px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <select id="attacker-select" style="flex: 1;"><option>Атакующий</option></select>
+                        <span style="align-self: center;">➔</span>
+                        <select id="target-select" style="flex: 1;"><option>Цель</option></select>
                     </div>
-                    <div class="flex-row" style="margin-top:8px;">
-                        <select id="weaponSelect">
-                            <option value="default">Оружие</option>
-                            <option value="Кулак">Кулак</option>
-                            <option value="Когти">Когти</option>
-                            <option value="Мясницкий тесак">Мясницкий тесак</option>
-                            <option value="Ритуальный нож">Ритуальный нож</option>
-                            <option value="Огненные когти">Огненные когти</option>
-                            <option value="Автопистолет">Автопистолет</option>
-                            <option value="Тяжёлый автопистолет">Тяжёлый автопистолет</option>
-                            <option value="Теневая магия">Теневая магия</option>
-                        </select>
-                        <input type="number" id="rangeMod" value="0" placeholder="Мод" style="width:60px;">
-                        <label><input type="checkbox" id="fullAttackCheck"> +10</label>
-                        <label><input type="checkbox" id="allOutAttackCheck"> +30</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="weapon-dmg-input" value="1d10+3" style="width: 80px;" placeholder="Урон">
+                        <input type="number" id="modifier-input" value="0" style="width: 60px;" placeholder="Мод.">
+                        <button class="tab-btn" id="btn-execute-attack" style="flex: 1; background: #4a0000; color: #fff;">💥 Атаковать</button>
                     </div>
-                    <button class="tab-btn btn-attack" id="attackBtn" style="width:100%; margin-top:8px;">💥
-                        Атаковать!</button>
-                    <div id="calcResult" class="calc-result" style="display:none;"></div>
                 </div>
 
-                <!-- Лог боя -->
-                <h4 style="margin-top:16px; border-bottom:1px solid var(--border-color); padding-bottom:6px;">📜
-                    Варп-лог</h4>
-                <div id="logContainer" class="log-container">
-                    <span style="color:#554444;">Ожидание подключения...</span>
+                <h4>📜 Варп-Лог:</h4>
+                <div id="battle-log" style="height: 250px; overflow-y: auto; background: #050303; border: 1px solid var(--border-color); padding: 10px; font-size: 13px;">
+                    <div>[Система] Ожидание подключения к Варпу...</div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script type="importmap">
-{
-    "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+<div id="rules-tab" class="tab-content">
+    <h2 style="color: var(--accent-glow);">⚔️ Шпаргалка по механике и боевой системе</h2>
+    
+    <div class="grid-two">
+        <div class="section-block">
+            <h3>🎲 Базовый тест (d100)</h3>
+            <p><strong>Формула:</strong> Характеристика + Бонус Навыка + Модификаторы = <strong>Предел</strong></p>
+            <p>Бросок успешен, если значение кубов <strong>≤ Предел</strong>.</p>
+            <ul>
+                <li><strong>Степени Успеха (DoS):</strong> Каждые полные 10 единиц ниже предела дают +1 DoS (1-й уровень за сам успех).</li>
+                <li><strong>Криты:</strong> Натуральные 1-5 — Критический Успех. Натуральные 96-100 — Критический Провал.</li>
+            </ul>
+        </div>
+
+        <div class="section-block">
+            <h3>⏳ Очки Действия в Ход (2 ОД)</h3>
+            <ul>
+                <li><strong>Полудействие (1 ОД):</strong> Одиночная атака, Движение (SPD×1), Прицеливание (+10 к следующему тесту), Обнажение оружия.</li>
+                <li><strong>Полное действие (2 ОД):</strong> Бег (SPD×6), Полная атака (+30 к тесту), Заряд (Charge).</li>
+                <li><strong>Реакция (1 в раунд):</strong> Уклонение (Dodge) или Парирование (Parry) вне своего хода.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section-block">
+        <h3>📊 Стандартные штрафы и модификаторы</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr><th>Ситуация / Статус</th><th>Модификатор / Штраф</th><th>Эффект</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>1 Уровень Усталости</td><td>−10</td><td>Штраф ко всем тестам</td></tr>
+                    <tr><td>2 Уровня Усталости</td><td>−20</td><td>Штраф ко всем тестам</td></tr>
+                    <tr><td>Ослеплён</td><td>−30</td><td>Автоматический провал тестов BS</td></tr>
+                    <tr><td>Оглушён</td><td>−20</td><td>Не может совершать Действия, Реакции запрещены</td></tr>
+                    <tr><td>Стрельба в упор (Point Blank)</td><td>+30</td><td>На расстоянии до 3 метров от цели</td></tr>
+                    <tr><td>Одиночный выстрел</td><td>+10</td><td>Стандартный бонус к тесту BS</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section-block">
+        <h3>🩸 Алгоритм получения урона</h3>
+        <ol>
+            <li>Выполняется <strong>Реакция</strong> (Уклонение/Парирование) — если успешно, атака аннулируется (При уклонении доступен Отскок до SPD м).</li>
+            <li>Если попало: Вычисляется <strong>Поглощение</strong> = Настоящий Бонус Стойкости (T.b) + Очки Брони локации (АР).</li>
+            <li>Финальный урон = Урон Атаки − Поглощение. Списывается из Очков Ран.</li>
+            <li>Если Раны падают ниже 0 — применяются таблицы <strong>Критических Эффектов</strong>.</li>
+        </ol>
+    </div>
+</div>
+
+<div id="demons-tab" class="tab-content">
+    <h2 style="color: var(--accent-glow);">😈 Правила системы «Демоны Black Crusade»</h2>
+    
+    <div class="section-block">
+        <h3>🌌 Плотность Завесы (Истончение)</h3>
+        <p>Основной фактор стабильности демонов в Материуме. Модификаторы влияют на тесты призыва и удержания:</p>
+        <table>
+            <thead>
+                <tr><th>Тип локации / Событие</th><th>Модификатор Завесы</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Освящённая земля (Собор, Санктум Механикус) / Мир-Святыня</td><td>-1</td></tr>
+                <tr><td>Место массовой смерти в недавнем прошлом / Активная война</td><td>+1</td></tr>
+                <li>Место резонирует со стандартными сильными эмоциями</td><td>+1</td></tr>
+                <tr><td>Место резонирует с ключевой эмоцией конкретного демона</td><td>+2</td></tr>
+                <tr><td>Внутри варп-шторма / Рядом с активным варп-рифтом</td><td>+3...4</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="grid-two">
+        <div class="section-block">
+            <h3>📊 Ранги и Характеристики Демонов</h3>
+            <table>
+                <thead>
+                    <tr><th>Сущность</th><th>WS</th><th>BS</th><th>S</th><th>T</th><th>Ag</th><th>WP</th><th>PR</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Мелкий (Нурглинг/Фантом)</td><td>20</td><td>15</td><td>20</td><td>25</td><td>25</td><td>30</td><td>1</td></tr>
+                    <tr><td>Низший (Кровопускатель)</td><td>25</td><td>20</td><td>25</td><td>25</td><td>25</td><td>35</td><td>1</td></tr>
+                    <tr><td>Техно-демон (Ваштор)</td><td>25</td><td>25</td><td>25</td><td>25</td><td>20</td><td>35</td><td>1</td></tr>
+                </tbody>
+            </table>
+            <p><small>*PR (Psy Rating) — для Тзинчитов стартует с 2, у остальных равен 1. Кхорниты полностью лишены колдовства.</small></p>
+        </div>
+
+        <div class="section-block">
+            <h3>⏳ Шпаргалка по времени пребывания (GM)</h3>
+            <table>
+                <thead>
+                    <tr><th>Форма проявления</th><th>Базовое время стабильности</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Истинная Форма</strong></td><td>1d10 + 2×W.b − Inf.b (мин. 2) <strong>Раундов</strong></td></tr>
+                    <tr><td><strong>Вселение (в труп)</strong></td><td>1d5 + 2×W.b − Inf.b (мин. 2) <strong>Дней</strong></td></tr>
+                    <tr><td><strong>«Эмоциональный Паразит»</strong></td><td>Останавливает отсчёт в радиусе 200м от 100+ людей</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="grid-two">
+        <div class="section-block">
+            <h3>🔮 Траты Тзинча (Фантом)</h3>
+            <ul>
+                <li><strong>Эмоциональный Паразит:</strong> Находясь у скоплений толпы, останавливает таймер изгнания.</li>
+                <li><strong>Разделение:</strong> При падении Ран до 0 (кроме святого оружия) дробится на 2 малых фантома с половиной характеристик.</li>
+            </ul>
+        </div>
+        <div class="section-block">
+            <h3>🩸 Траты Кхорна (Кровопускатель)</h3>
+            <ul>
+                <li><strong>Знания Орудий Гнева:</strong> Автоматически распознает любое оружие и игнорирует штрафы за отсутствие навыка обращения.</li>
+                <li><strong>Кровопускание:</strong> Каждая успешная рубящая атака накладывает статус кровотечения со штрафом −10 к тесту на остановку.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openTab(evt, tabId) {
+        const contents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < contents.length; i++) {
+            contents[i].classList.remove("active");
+        }
+        const buttons = document.getElementsByClassName("tab-btn");
+        for (let i = 0; i < buttons.length; i++) {
+            buttons[i].classList.remove("active");
+        }
+        document.getElementById(tabId).classList.add("active");
+        evt.currentTarget.classList.add("active");
     }
-}
 </script>
 
-    <script type="module" src="js/battle-init.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
-
 </html>
