@@ -1,5 +1,5 @@
 // js/main.js
-import { db } from './firebase-config.js';
+import { db, collection, addDoc, onSnapshot } from './firebase-config.js';
 import {
     collection, query, where, onSnapshot,
     doc, updateDoc, deleteDoc, addDoc,
