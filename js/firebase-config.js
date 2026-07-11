@@ -6,30 +6,37 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const getEnvValue = (viteValue, windowKey) => {
-    if (typeof viteValue !== 'undefined' && viteValue !== '') return viteValue;
-    if (typeof window !== 'undefined' && window[windowKey]) return window[windowKey];
+// Безопасное извлечение переменных с защитой от undefined при сборке Vite
+const getEnvValue = (key) => {
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+        if (import.meta.env[key]) return import.meta.env[key];
+    }
+    if (typeof window !== 'undefined' && window[key]) {
+        return window[key];
+    }
     return "";
 };
 
 const firebaseConfig = {
-    apiKey: getEnvValue(import.meta.env.VITE_FIREBASE_API_KEY, "VITE_FIREBASE_API_KEY"),
-    authDomain: getEnvValue(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, "VITE_FIREBASE_AUTH_DOMAIN"),
-    projectId: getEnvValue(import.meta.env.VITE_FIREBASE_PROJECT_ID, "VITE_FIREBASE_PROJECT_ID"),
-    storageBucket: getEnvValue(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, "VITE_FIREBASE_STORAGE_BUCKET"),
-    messagingSenderId: getEnvValue(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, "VITE_FIREBASE_MESSAGING_SENDER_ID"),
-    appId: getEnvValue(import.meta.env.VITE_FIREBASE_APP_ID, "VITE_FIREBASE_APP_ID")
+    apiKey: getEnvValue("VITE_FIREBASE_API_KEY"),
+    authDomain: getEnvValue("VITE_FIREBASE_AUTH_DOMAIN"),
+    projectId: getEnvValue("VITE_FIREBASE_PROJECT_ID"),
+    storageBucket: getEnvValue("VITE_FIREBASE_STORAGE_BUCKET"),
+    messagingSenderId: getEnvValue("VITE_FIREBASE_MESSAGING_SENDER_ID"),
+    appId: getEnvValue("VITE_FIREBASE_APP_ID")
 };
 
+// Инициализация Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Анонимная авторизация для доступа к Firestore
 signInAnonymously(auth)
     .then(() => console.log("✦ Подключение к Варпу успешно установлено (Firebase Auth) ✦"))
     .catch((err) => console.warn("Ошибка авторизации в Варпе:", err));
 
-// Экспортируем абсолютно всё в одном месте
+// Единый чистый экспорт для всех модулей (включая main.js)
 export { 
     db, auth, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc,
     query, where, serverTimestamp 
