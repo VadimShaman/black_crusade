@@ -1,21 +1,16 @@
-import { db, collection, onSnapshot, query, orderBy } from './firebase-config.js';
+import { db } from './firebase-config.js';
+import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
-    const list = document.getElementById('initiative-list');
-    if (!list) return;
+    const params = new URLSearchParams(window.location.search);
+    const battleId = params.get('id');
+    const titleEl = document.getElementById('battle-title');
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const battleId = urlParams.get('id');
-
-    if (battleId) {
-        const q = query(collection(db, "battles"), orderBy("initiative", "desc"));
-        onSnapshot(q, (snapshot) => {
-            let html = '';
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                html += `<div class="combatant">${data.name || 'Боец'}</div>`;
-            });
-            list.innerHTML = html;
+    if (battleId && titleEl) {
+        onSnapshot(doc(db, 'battles', battleId), (doc) => {
+            if (doc.exists()) {
+                titleEl.innerText = `Сражение: ${doc.data().name}`;
+            }
         });
     }
 });
