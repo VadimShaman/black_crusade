@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - master # Робот будет просыпаться при каждом пуше в master
+      - master
 
 permissions:
   contents: read
@@ -27,19 +27,15 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-node: 20
-          cache: "npm"
+          node-version: 20
 
-      - name: Install dependencies
-        run: |
-          if [ -f package.json ]; then
-            npm install
-          else
-            npm init -y && npm install vite --save-dev
-          fi
+      # Робот сам установит Vite глобально в виртуальной машине, package.json больше не нужен
+      - name: Install Vite Global
+        run: npm install -g vite
 
+      # Собираем проект, жестко вшивая секреты прямо в файлы дистрибутива
       - name: Build project with Vite
-        run: npx vite build --base=/black_crusade/
+        run: vite build --base=/black_crusade/
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
