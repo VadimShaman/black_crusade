@@ -1,24 +1,54 @@
-// js/firebase-config.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+name: Deploy to GitHub Pages
 
-// Vite прокидывает переменные через специальный объект import.meta.env
-const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
+on:
+  push:
+    branches: [ "master" ]
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-signInAnonymously(auth)
-    .then(() => console.log("✦ Подключение к Варпу успешно установлено (Firebase Auth) ✦"))
-    .catch((err) => console.warn("Ошибка авторизации в Варпе:", err));
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-export { db, auth, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc };
+      - name: Generate firebase-config.js from secrets
+        run: |
+          mkdir -p js
+          cat > js/firebase-config.js << 'EOF'
+          // ⚠️ Этот файл генерируется автоматически из секретов GitHub
+          // НЕ РЕДАКТИРУЙТЕ ЕГО ВРУЧНУЮ
+
+          import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+          import { getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+          import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+          const firebaseConfig = {
+              apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+              authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
+              projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+              storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
+              messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+              appId: "${{ secrets.FIREBASE_APP_ID }}"
+          };
+
+          const app = initializeApp(firebaseConfig);
+          const db = getFirestore(app);
+          const auth = getAuth(app);
+
+          signInAnonymously(auth)
+              .then(() => console.log("✦ Подключение к Варпу успешно установлено (Firebase Auth) ✦"))
+              .catch((err) => console.warn("Ошибка авторизации в Варпе:", err));
+
+          export { db, auth, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc };
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          allow_empty_commit: true
