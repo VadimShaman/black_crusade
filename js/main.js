@@ -1,13 +1,5 @@
 // js/main.js
-import {
-    db, 
-    collection, 
-    addDoc, 
-    onSnapshot, 
-    query, 
-    where, 
-    serverTimestamp
-} from './firebase-config.js';
+import { db, collection, addDoc, onSnapshot, query, where, serverTimestamp } from './firebase-config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🔥 Black Crusade Hub загружен!");
@@ -17,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
             btn.classList.add('active');
             const tabContent = document.getElementById(`tab-${btn.dataset.tab}`);
             if (tabContent) tabContent.classList.add('active');
@@ -32,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         createBtn.addEventListener('click', async () => {
             const name = battleNameInput ? battleNameInput.value.trim() : "Без названия";
             console.log("DEBUG: Попытка создания боя:", name);
-            
+
             try {
                 await addDoc(collection(db, 'battles'), {
                     name: name,
@@ -58,8 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
             snapshot.forEach(doc => {
                 const data = doc.data();
                 html += `
-                    <div style="display:flex; justify-content:space-between; padding:6px 0;">
-                        <span>${data.name}</span>
+                    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <span>${data.name || 'Без названия'}</span>
                         <button onclick="window.open('battle.html?id=${doc.id}','_blank')">Войти</button>
                     </div>`;
             });
