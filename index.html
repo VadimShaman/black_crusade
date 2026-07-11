@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
         window.VITE_FIREBASE_APP_ID = "1:666897001453:web:0be0f79154f8e10b4115e4";
     </script>
 </head>
+
 <body class="grimdark-bg">
 
     <div class="tabs-container" style="margin-bottom: 20px;">
@@ -37,24 +39,22 @@
 
     <script>
         function openTab(evt, tabId) {
-            // Скрываем все блоки контента
             const contents = document.getElementsByClassName("tab-content");
             for (let i = 0; i < contents.length; i++) {
                 contents[i].style.display = "none";
                 contents[i].classList.remove("active");
             }
-            // Убираем класс active у всех кнопок
             const buttons = document.getElementsByClassName("tab-btn");
             for (let i = 0; i < buttons.length; i++) {
                 buttons[i].classList.remove("active");
             }
-            // Показываем нужный блок и делаем кнопку активной
             document.getElementById(tabId).style.display = "block";
             document.getElementById(tabId).classList.add("active");
             evt.currentTarget.classList.add("active");
         }
     </script>
 
-    <script type="module" src="/js/main.js"></script>
+    <script type="module" src="./js/main.js"></script>
 </body>
+
 </html>
