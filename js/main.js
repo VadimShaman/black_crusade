@@ -5,33 +5,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const createBtn = document.getElementById('btn-create-battle');
     const nameInput = document.getElementById('battle-name-input');
 
-    // 1. Отрисовка списка боев
+    // 1. Отрисовка списка
     if (battlesList) {
         const q = query(collection(db, 'battles'), where('isActive', '==', true));
         onSnapshot(q, (snapshot) => {
-            let html = '<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">';
+            let html = '<div class="battle-grid">';
             if (snapshot.empty) {
-                html += '<p>Активных сражений в секторе нет.</p>';
+                html += '<p>Активных сражений нет.</p>';
             } else {
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    // Найдите этот блок в main.js и замените на этот:
+                    const bId = docSnap.id; // Берем ID из снапшота
+
                     html += `
-    <div class="battle-card" style="border:1px solid #4a0000; padding:10px; margin:5px 0;">
-        <span>⚔️ ${data.name || 'Безымянный конфликт'}</span>
-        <button onclick="window.location.href='/battle.html?id=${doc.id}'">Войти</button>
-        <button onclick="window.deleteBattle('${doc.id}')" style="background:#400;">Удалить</button>
-    </div>`;
+                        <div class="battle-card" style="border:1px solid #4a0000; padding:10px; margin:5px 0; display:flex; justify-content:space-between;">
+                            <span>⚔️ ${data.name || 'Бой'}</span>
+                            <div>
+                                <button onclick="window.location.href='/battle.html?id=${bId}'">Войти</button>
+                                <button onclick="window.deleteBattle('${bId}')" style="background:#400; color:#fff;">Удалить</button>
+                            </div>
+                        </div>`;
                 });
             }
             battlesList.innerHTML = html + '</div>';
         });
     }
 
-    // 2. Глобальная функция удаления
+    // 2. Глобальная функция для удаления (привязываем к window)
     window.deleteBattle = async (id) => {
+        if (!id || id === 'undefined') return;
         if (confirm("Удалить этот бой навсегда?")) {
-            await deleteDoc(doc(db, 'battles', id));
+            try {
+                await deleteDoc(doc(db, 'battles', id));
+                console.log("Бой удален:", id);
+            } catch (e) {
+                console.error("Ошибка удаления:", e);
+                alert("Ошибка удаления: " + e.message);
+            }
         }
     };
 
@@ -39,7 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (createBtn) {
         createBtn.addEventListener('click', async () => {
             const name = nameInput ? nameInput.value.trim() : "Новый бой";
-            await addDoc(collection(db, 'battles'), { name, isActive: true, createdAt: serverTimestamp() });
+            await addDoc(collection(db, 'battles'), {
+                name,
+                isActive: true,
+                createdAt: serverTimestamp()
+            });
             if (nameInput) nameInput.value = '';
         });
     }
