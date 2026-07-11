@@ -1,16 +1,14 @@
 // js/firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+    getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc,
+    query, where, serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// Прямое и безопасное извлечение переменных для Vite
 const getEnvValue = (viteValue, windowKey) => {
-    if (typeof viteValue !== 'undefined' && viteValue !== '') {
-        return viteValue;
-    }
-    if (typeof window !== 'undefined' && window[windowKey]) {
-        return window[windowKey];
-    }
+    if (typeof viteValue !== 'undefined' && viteValue !== '') return viteValue;
+    if (typeof window !== 'undefined' && window[windowKey]) return window[windowKey];
     return "";
 };
 
@@ -23,11 +21,6 @@ const firebaseConfig = {
     appId: getEnvValue(import.meta.env.VITE_FIREBASE_APP_ID, "VITE_FIREBASE_APP_ID")
 };
 
-// Проверяем конфигурацию
-if (!firebaseConfig.apiKey) {
-    console.warn("⚠️ Внимание: Конфигурация Firebase пуста. Проверьте секреты в GitHub Репозитории.");
-}
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -36,4 +29,8 @@ signInAnonymously(auth)
     .then(() => console.log("✦ Подключение к Варпу успешно установлено (Firebase Auth) ✦"))
     .catch((err) => console.warn("Ошибка авторизации в Варпе:", err));
 
-export { db, auth, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc };
+// Экспортируем абсолютно всё в одном месте
+export { 
+    db, auth, collection, doc, addDoc, updateDoc, onSnapshot, getDoc, deleteDoc,
+    query, where, serverTimestamp 
+};

@@ -1,10 +1,7 @@
 // js/main.js
-import { db, collection, addDoc, onSnapshot } from './firebase-config.js';
 import {
-    collection, query, where, onSnapshot,
-    doc, updateDoc, deleteDoc, addDoc,
-    serverTimestamp
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    db, collection, addDoc, onSnapshot, query, where, doc, updateDoc, deleteDoc, serverTimestamp
+} from './firebase-config.js';
 
 // ============================================================
 // 1. ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
