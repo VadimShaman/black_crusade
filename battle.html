@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель Сражения | Black Crusade Hub</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <script>
+        window.VITE_FIREBASE_API_KEY = "AIzaSyBVFjbiXDIQbgntZYeEDY3nB63zs8Q4gNk";
+        window.VITE_FIREBASE_AUTH_DOMAIN = "bc-battle-tracker.firebaseapp.com";
+        window.VITE_FIREBASE_PROJECT_ID = "bc-battle-tracker";
+        window.VITE_FIREBASE_STORAGE_BUCKET = "bc-battle-tracker.firebasestorage.app";
+        window.VITE_FIREBASE_MESSAGING_SENDER_ID = "666897001453";
+        window.VITE_FIREBASE_APP_ID = "1:666897001453:web:0be0f79154f8e10b4115e4";
+    </script>
+</head>
+
+<body class="grimdark-bg">
+
+    <div class="battle-container">
+        <header class="battle-header">
+            <h1 id="battle-title" class="gothic-text">Загрузка данных сражения...</h1>
+            <div class="battle-meta">
+                <span id="battle-id-display">ID: </span>
+                <span id="turn-counter" class="highlight-text">Раунд: 1</span>
+            </div>
+        </header>
+
+        <main class="battle-grid">
+
+            <section class="initiative-section card-panel">
+                <h2 class="section-title">Очередь Инициативы</h2>
+                <div id="initiative-list" class="dynamic-list">
+                </div>
+
+                <div class="battle-controls">
+                    <button id="prev-turn-btn" class="btn btn-secondary">◀ Пред. Ход</button>
+                    <button id="next-turn-btn" class="btn btn-primary">След. Ход ▶</button>
+                </div>
+            </section>
+
+            <section class="control-section card-panel">
+                <h2 class="section-title">Добавить участника</h2>
+                <form id="add-combatant-form" class="grim-form">
+                    <div class="form-group">
+                        <label for="combatant-name">Имя / Обозначение</label>
+                        <input type="text" id="combatant-name" required placeholder="Например: Космодесантник Хаоса">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="combatant-init">Инициатива</label>
+                            <input type="number" id="combatant-init" required min="0" max="50" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="combatant-hp">Макс. Очки Ранений (HP)</label>
+                            <input type="number" id="combatant-hp" required min="1" max="1000" value="30">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="combatant-type">Фракция / Тип</label>
+                        <select id="combatant-type">
+                            <option value="player">Персонаж Игрока (Еретик)</option>
+                            <option value="npc-ally">Союзник</option>
+                            <option value="enemy" selected>Враг (Слуги Трупа-на-Троне)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-accent">Ввести в бой</button>
+                </form>
+
+                <div class="battle-log-container">
+                    <h3 class="sub-title">Лог Сражения</h3>
+                    <div id="battle-log" class="log-viewport">
+                        <p class="log-entry system">✦ Лог инициализирован. Ожидание приказов Варп-кузнеца... ✦</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="battle-footer">
+            <a href="index.html" class="back-link">◀ Выйти из боя и вернуться в Главный Хаб</a>
+        </footer>
+    </div>
+
+    <script type="module" src="js/battle-init.js"></script>
+</body>
+
+</html>
