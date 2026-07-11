@@ -1,5 +1,13 @@
 // js/main.js
-
+import {
+    db,
+    collection,
+    addDoc,
+    onSnapshot,
+    query,
+    where,
+    serverTimestamp
+} from './firebase-config.js';
 // Оборачиваем всё в DOMContentLoaded, чтобы ждать полной загрузки HTML
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DEBUG: DOM готов, инициализируем кнопки...");
@@ -14,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Еретик, введи имя боя!");
                 return;
             }
-            
+
             try {
                 console.log("DEBUG: Пытаюсь создать бой:", name);
                 await addDoc(collection(db, 'battles'), {
