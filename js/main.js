@@ -1,31 +1,34 @@
-import { db, collection, addDoc } from './firebase-config.js';
+// js/main.js
 
+// Оборачиваем всё в DOMContentLoaded, чтобы ждать полной загрузки HTML
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG: DOM загружен, ищем элементы...");
-    
+    console.log("DEBUG: DOM готов, инициализируем кнопки...");
+
     const createBtn = document.getElementById('btn-create-battle');
-    const nameInput = document.getElementById('battle-name-input');
-    
-    if (!createBtn) console.error("DEBUG: Кнопка #btn-create-battle НЕ НАЙДЕНА!");
-    if (!nameInput) console.error("DEBUG: Поле #battle-name-input НЕ НАЙДЕНО!");
+    const battleNameInput = document.getElementById('battle-name-input');
 
     if (createBtn) {
         createBtn.addEventListener('click', async () => {
-            console.log("DEBUG: Клик по кнопке!");
-            const name = nameInput ? nameInput.value.trim() : "Без имени";
+            const name = battleNameInput ? battleNameInput.value.trim() : "";
+            if (!name) {
+                alert("Еретик, введи имя боя!");
+                return;
+            }
             
             try {
-                console.log("DEBUG: Отправляем в Firebase:", name);
+                console.log("DEBUG: Пытаюсь создать бой:", name);
                 await addDoc(collection(db, 'battles'), {
                     name: name,
                     isActive: true,
-                    turn: 1
+                    turn: 1,
+                    createdAt: serverTimestamp()
                 });
-                console.log("DEBUG: УСПЕХ!");
                 alert("Бой создан!");
             } catch (err) {
-                console.error("DEBUG: ОШИБКА FIREBASE:", err);
+                console.error("DEBUG: Ошибка записи в Firebase:", err);
             }
         });
+    } else {
+        console.error("DEBUG: Кнопка #btn-create-battle не найдена на странице!");
     }
 });
