@@ -1,34 +1,31 @@
-import { db, collection, addDoc, onSnapshot, query, where } from './firebase-config.js';
+import { db, collection, addDoc } from './firebase-config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🔥 Black Crusade Hub загружен!");
-
-    const battleNameInput = document.getElementById('battle-name-input');
+    console.log("DEBUG: DOM загружен, ищем элементы...");
+    
     const createBtn = document.getElementById('btn-create-battle');
-    const battlesList = document.getElementById('active-battles-list');
+    const nameInput = document.getElementById('battle-name-input');
+    
+    if (!createBtn) console.error("DEBUG: Кнопка #btn-create-battle НЕ НАЙДЕНА!");
+    if (!nameInput) console.error("DEBUG: Поле #battle-name-input НЕ НАЙДЕНО!");
 
-    // Кнопка создания боя
-    if (createBtn && battleNameInput) {
+    if (createBtn) {
         createBtn.addEventListener('click', async () => {
-            const name = battleNameInput.value.trim();
-            if (!name) return alert("Введи имя боя!");
+            console.log("DEBUG: Клик по кнопке!");
+            const name = nameInput ? nameInput.value.trim() : "Без имени";
+            
             try {
-                await addDoc(collection(db, 'battles'), { name, isActive: true, turn: 1 });
-                battleNameInput.value = '';
-            } catch (e) { console.error("Ошибка:", e); }
-        });
-    }
-
-    // Список боёв
-    if (battlesList) {
-        const q = query(collection(db, 'battles'), where('isActive', '==', true));
-        onSnapshot(q, (snapshot) => {
-            let html = '';
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                html += `<div>${data.name} <button onclick="window.open('battle.html?id=${doc.id}','_self')">Войти</button></div>`;
-            });
-            battlesList.innerHTML = html || 'Нет активных боёв.';
+                console.log("DEBUG: Отправляем в Firebase:", name);
+                await addDoc(collection(db, 'battles'), {
+                    name: name,
+                    isActive: true,
+                    turn: 1
+                });
+                console.log("DEBUG: УСПЕХ!");
+                alert("Бой создан!");
+            } catch (err) {
+                console.error("DEBUG: ОШИБКА FIREBASE:", err);
+            }
         });
     }
 });
