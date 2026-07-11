@@ -1,0 +1,30 @@
+# Firebase
+*.log
+*.tmp
+.firebase/
+firebase-debug.log
+.firebase/
+firebase-config.js
+
+# Node / npm
+node_modules/
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System
+.DS_Store
+Thumbs.db
+
+# Sensitive
+.env
+*.pem
+*.key
+
+grep "firebase-config.js" .gitignorejs/firebase-config.js

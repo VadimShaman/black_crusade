@@ -1,0 +1,262 @@
+/* css/style.css */
+:root {
+    --bg-dark: #0a0808;
+    --bg-card: #141010;
+    --primary-red: #7a0000;
+    --accent-glow: #cc3300;
+    --text-light: #d4c8c8;
+    --border-color: #2a1a1a;
+    --font-mono: 'Courier New', Courier, monospace;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-mono);
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* Хедер */
+header {
+    text-align: center;
+    border-bottom: 2px solid var(--primary-red);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+}
+
+header h1 {
+    color: var(--primary-red);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(122, 0, 0, 0.5);
+    font-size: 28px;
+}
+
+/* Навигация по вкладкам */
+.tabs-nav {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    background-color: var(--bg-card);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    padding: 10px 24px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.tab-btn:hover {
+    border-color: var(--accent-glow);
+    box-shadow: 0 0 12px rgba(204, 51, 0, 0.3);
+}
+
+.tab-btn.active {
+    background-color: var(--primary-red);
+    color: #fff;
+    border-color: var(--accent-glow);
+    box-shadow: 0 0 20px rgba(122, 0, 0, 0.5);
+}
+
+/* Контент вкладок */
+.tab-content {
+    display: none;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    border-radius: 6px;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Таблицы */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+}
+
+th,
+td {
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    text-align: left;
+}
+
+th {
+    background-color: var(--primary-red);
+    color: #fff;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Сетки */
+.grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .grid-two {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Инпуты и селекты */
+input,
+select {
+    background-color: #0a0808;
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent-glow);
+}
+
+/* Кнопки в бою */
+.btn-action {
+    background-color: var(--bg-card);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    border-color: var(--accent-glow);
+}
+
+.btn-danger {
+    background-color: #4a0000;
+    border-color: #7a0000;
+}
+
+.btn-danger:hover {
+    background-color: #7a0000;
+}
+
+/* Лог боя */
+.log-container {
+    height: 250px;
+    overflow-y: auto;
+    background-color: #080505;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+}
+
+.log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.log-entry .time {
+    color: #554444;
+    margin-right: 10px;
+}
+
+.log-entry.damage {
+    color: #cc4444;
+}
+
+.log-entry.system {
+    color: #6688aa;
+}
+
+.log-entry.critical {
+    color: #ff8800;
+    font-weight: bold;
+}
+
+/* Список инициативы */
+.init-list {
+    background-color: #080505;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    min-height: 100px;
+}
+
+.init-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.init-item.active {
+    background-color: rgba(122, 0, 0, 0.3);
+    border-left: 3px solid var(--accent-glow);
+}
+
+.init-item.dead {
+    opacity: 0.3;
+    text-decoration: line-through;
+}
+
+/* Утилиты */
+.mb-12 {
+    margin-bottom: 12px;
+}
+
+.mt-12 {
+    margin-top: 12px;
+}
+
+.flex {
+    display: flex;
+}
+
+.gap-8 {
+    gap: 8px;
+}
+
+.gap-12 {
+    gap: 12px;
+}
