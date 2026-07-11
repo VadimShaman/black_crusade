@@ -1,12 +1,11 @@
 {
-    "name": "black-crusade-hub",
+    "name": "black_crusade",
     "private": true,
-    "version": "1.1.0",
+    "version": "1.0.0",
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
-        "preview": "vite preview"
+        "build": "vite build"
     },
     "devDependencies": {
         "vite": "^5.0.0"
