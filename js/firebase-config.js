@@ -1,6 +1,8 @@
+// js/firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
-    getFirestore, collection, addDoc, onSnapshot, query, where, doc, updateDoc, deleteDoc, serverTimestamp 
+    getFirestore, collection, addDoc, onSnapshot, query, where, doc, 
+    updateDoc, deleteDoc, serverTimestamp, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -19,5 +21,8 @@ const auth = getAuth(app);
 
 signInAnonymously(auth).catch((err) => console.warn("Варп-ошибка:", err));
 
-// ЯВНЫЙ ЭКСПОРТ ВСЕГО НЕОБХОДИМОГО
-export { db, auth, collection, addDoc, onSnapshot, query, where, doc, updateDoc, deleteDoc, serverTimestamp };
+export { 
+    db, auth, 
+    collection, addDoc, onSnapshot, query, where, doc, 
+    updateDoc, deleteDoc, serverTimestamp, getDoc 
+};
