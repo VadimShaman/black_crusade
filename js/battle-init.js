@@ -145,6 +145,7 @@ function updateCombatants(data) {
         });
     });
 }
+
 // ============================================================
 // 4. ПОДПИСКА НА БОЙ (FIREBASE REALTIME)
 // ============================================================
@@ -423,7 +424,7 @@ document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
 });
 
 // ============================================================
-// 7. ИНИЦИАТИВА (НОВАЯ ВЕРСИЯ)
+// 7. ИНИЦИАТИВА
 // ============================================================
 
 const initQueue = [];
@@ -435,6 +436,9 @@ function updateInitSelect() {
     const chars = state.battleData?.characters || {};
     const entries = Object.entries(chars);
 
+    // Сохраняем текущее значение
+    const currentValue = select.value;
+
     select.innerHTML = '<option value="">Выберите участника</option>';
     entries.forEach(([id, char]) => {
         if (char.isActive !== false && char.status !== 'dead') {
@@ -442,6 +446,16 @@ function updateInitSelect() {
             select.innerHTML += `<option value="${id}" data-ag="${agBonus}">${char.name} (Ag: ${agBonus})</option>`;
         }
     });
+
+    // Восстанавливаем выбор
+    if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+        select.value = currentValue;
+        const selected = select.options[select.selectedIndex];
+        const agBonus = selected?.dataset?.ag || 0;
+        document.getElementById('init-ag-display').textContent = agBonus;
+    } else {
+        document.getElementById('init-ag-display').textContent = '0';
+    }
 }
 
 // Подставляем бонус при выборе персонажа
@@ -477,6 +491,40 @@ document.getElementById('init-roll-btn')?.addEventListener('click', () => {
 
     renderInitQueue();
     addLogEntry(`🎲 ${name} бросает инициативу: ${roll} + ${agBonus} = ${total}`, 'system');
+});
+
+// Рассчитать инициативу для всех
+document.getElementById('init-auto-btn')?.addEventListener('click', () => {
+    const chars = state.battleData?.characters || {};
+    const entries = Object.entries(chars);
+    if (entries.length === 0) {
+        alert('Нет участников для расчёта инициативы');
+        return;
+    }
+
+    // Очищаем очередь
+    initQueue.length = 0;
+
+    // Для каждого активного персонажа делаем бросок
+    entries.forEach(([id, char]) => {
+        if (char.isActive !== false && char.status !== 'dead') {
+            const agBonus = Math.floor((char.ag || 25) / 10);
+            const roll = Math.floor(Math.random() * 10) + 1;
+            const total = roll + agBonus;
+            initQueue.push({
+                charId: id,
+                name: char.name || 'Безымянный',
+                agBonus: agBonus,
+                roll: roll,
+                total: total
+            });
+        }
+    });
+
+    // Сортируем по убыванию
+    initQueue.sort((a, b) => b.total - a.total);
+    renderInitQueue();
+    addLogEntry(`⚡ Инициатива рассчитана для ${initQueue.length} участников`, 'system');
 });
 
 // Применяем очередь к бою
@@ -551,19 +599,19 @@ function renderInitQueue() {
     });
 }
 
-// Подписываемся на обновление селекта при изменении состава боя
-// (вызываем в updateCombatants)
-
 // ============================================================
 // 8. СЛЕДУЮЩИЙ ХОД
 // ============================================================
 document.getElementById('next-turn-btn')?.addEventListener('click', async () => {
-    console.log('⏩ Следующий ход нажат');
+    console.log('⏩ Ход следующего участника нажат');
     try {
         const data = state.battleData;
         if (!data) return;
         const turnOrder = data.turnOrder || [];
-        if (turnOrder.length === 0) return;
+        if (turnOrder.length === 0) {
+            alert('Нет очереди инициативы');
+            return;
+        }
 
         let nextIndex = (data.currentTurnIndex || 0) + 1;
         let attempts = 0;
@@ -588,9 +636,69 @@ document.getElementById('next-turn-btn')?.addEventListener('click', async () => 
             currentPlayerId: turnOrder[nextIndex].id,
             turn: (data.turn || 0) + 1
         });
+        addLogEntry(`⏩ Ход передан участнику ${turnOrder[nextIndex].name}`, 'system');
     } catch (err) {
         console.error(err);
         addLogEntry(`❌ Ошибка перехода хода: ${err.message}`, 'system');
+    }
+});
+
+// ============================================================
+// 8.1. КОНЕЦ РАУНДА
+// ============================================================
+document.getElementById('end-round-btn')?.addEventListener('click', async () => {
+    try {
+        const data = state.battleData;
+        if (!data) return;
+        const turnOrder = data.turnOrder || [];
+        if (turnOrder.length === 0) {
+            alert('Нет очереди инициативы');
+            return;
+        }
+
+        // Находим первого живого
+        let firstAliveIndex = -1;
+        for (let i = 0; i < turnOrder.length; i++) {
+            const id = turnOrder[i]?.id;
+            if (id && data.characters[id]?.isActive !== false) {
+                firstAliveIndex = i;
+                break;
+            }
+        }
+
+        if (firstAliveIndex === -1) {
+            alert('Нет живых участников');
+            return;
+        }
+
+        await updateDoc(battleRef, {
+            currentTurnIndex: firstAliveIndex,
+            currentPlayerId: turnOrder[firstAliveIndex].id,
+            turn: (data.turn || 0) + 1
+        });
+        addLogEntry(`🔁 Начало раунда ${(data.turn || 0) + 1}`, 'system');
+    } catch (err) {
+        console.error(err);
+        alert('Ошибка: ' + err.message);
+    }
+});
+
+// ============================================================
+// 8.2. КОНЕЦ БОЯ
+// ============================================================
+document.getElementById('end-battle-btn')?.addEventListener('click', async () => {
+    if (!confirm('⛔ Завершить бой? Это действие необратимо.')) return;
+    try {
+        await updateDoc(battleRef, {
+            isActive: false,
+            isFinished: true,
+            finishedAt: serverTimestamp()
+        });
+        addLogEntry('⛔ БОЙ ЗАВЕРШЁН', 'system');
+        alert('Бой завершён');
+    } catch (err) {
+        console.error(err);
+        alert('Ошибка: ' + err.message);
     }
 });
 
@@ -703,15 +811,19 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
 });
 
 // ============================================================
-// 10. КУБЫ
+// 10. КУБЫ — ВСТАВКА В ПОЛЕ
 // ============================================================
-
-// Обычные кнопки кубов (d4, d6, d8, d10, d12, d20, d100)
-document.querySelectorAll('.dice-btn').forEach(btn => {
+document.querySelectorAll('.dice-insert-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        const sides = parseInt(btn.dataset.sides);
-        const result = Math.floor(Math.random() * sides) + 1;
-        addLogEntry(`🎲 d${sides}: <span class="dice-roll">${result}</span>`, 'system');
+        const dice = btn.dataset.dice;
+        const input = document.getElementById('dice-custom-input');
+        if (input) {
+            if (input.value.trim() === '') {
+                input.value = dice;
+            } else {
+                input.value += `+${dice}`;
+            }
+        }
     });
 });
 
@@ -749,6 +861,7 @@ document.getElementById('dice-custom-btn')?.addEventListener('click', () => {
             `🎲 ${expr} → [${results.join(', ')}]${modStr} = <span class="dice-roll">${total}</span>`,
             'system'
         );
+        input.value = '';
     } catch (e) {
         addLogEntry(`❌ Ошибка броска: ${e.message}`, 'system');
     }
