@@ -82,6 +82,7 @@ function updateCombatants(data) {
     // ===== ОБНОВЛЯЕМ СЕЛЕКТЫ ДЛЯ АТАКИ =====
     const attackerSelect = document.getElementById('attacker-select');
     const defenderSelect = document.getElementById('defender-select');
+
     if (attackerSelect) {
         attackerSelect.innerHTML = '<option value="">Атакующий</option>';
         entries.forEach(([id, char]) => {
@@ -98,6 +99,9 @@ function updateCombatants(data) {
             }
         });
     }
+
+    // ===== ОБНОВЛЯЕМ СЕЛЕКТ ДЛЯ ИНИЦИАТИВЫ =====
+    updateInitSelect();
 
     if (entries.length === 0) {
         combatantsList.innerHTML = '<div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>';
@@ -141,7 +145,6 @@ function updateCombatants(data) {
         });
     });
 }
-
 // ============================================================
 // 4. ПОДПИСКА НА БОЙ (FIREBASE REALTIME)
 // ============================================================
@@ -420,34 +423,136 @@ document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
 });
 
 // ============================================================
-// 7. ИНИЦИАТИВА
+// 7. ИНИЦИАТИВА (НОВАЯ ВЕРСИЯ)
 // ============================================================
-document.getElementById('roll-init-btn')?.addEventListener('click', async () => {
-    console.log('🎲 Инициатива нажата');
-    try {
-        const chars = state.battleData?.characters || {};
-        const turnOrder = [];
-        for (const [id, char] of Object.entries(chars)) {
-            if (!char.isActive) continue;
-            const agBonus = Math.floor((char.ag || 25) / 10);
-            const roll = Math.floor(Math.random() * 10) + 1;
-            turnOrder.push({ id, initiative: roll + agBonus, name: char.name || 'Безымянный' });
-        }
-        turnOrder.sort((a, b) => b.initiative - a.initiative);
 
+const initQueue = [];
+
+// Обновляем список персонажей в селекте
+function updateInitSelect() {
+    const select = document.getElementById('init-char-select');
+    if (!select) return;
+    const chars = state.battleData?.characters || {};
+    const entries = Object.entries(chars);
+
+    select.innerHTML = '<option value="">Выберите участника</option>';
+    entries.forEach(([id, char]) => {
+        if (char.isActive !== false && char.status !== 'dead') {
+            const agBonus = Math.floor((char.ag || 25) / 10);
+            select.innerHTML += `<option value="${id}" data-ag="${agBonus}">${char.name} (Ag: ${agBonus})</option>`;
+        }
+    });
+}
+
+// Подставляем бонус при выборе персонажа
+document.getElementById('init-char-select')?.addEventListener('change', (e) => {
+    const select = e.target;
+    const selected = select.options[select.selectedIndex];
+    const agBonus = selected?.dataset?.ag || 0;
+    document.getElementById('init-ag-display').textContent = agBonus;
+});
+
+// Бросок инициативы для выбранного персонажа
+document.getElementById('init-roll-btn')?.addEventListener('click', () => {
+    const select = document.getElementById('init-char-select');
+    if (!select || !select.value) {
+        alert('Выберите участника');
+        return;
+    }
+    const selected = select.options[select.selectedIndex];
+    const charId = select.value;
+    const name = selected.text.split(' (')[0];
+    const agBonus = parseInt(selected.dataset.ag) || 0;
+    const roll = Math.floor(Math.random() * 10) + 1;
+    const total = roll + agBonus;
+
+    // Проверяем, нет ли уже этого персонажа в очереди
+    const existing = initQueue.find(item => item.charId === charId);
+    if (existing) {
+        existing.roll = roll;
+        existing.total = total;
+    } else {
+        initQueue.push({ charId, name, agBonus, roll, total });
+    }
+
+    renderInitQueue();
+    addLogEntry(`🎲 ${name} бросает инициативу: ${roll} + ${agBonus} = ${total}`, 'system');
+});
+
+// Применяем очередь к бою
+document.getElementById('init-apply-btn')?.addEventListener('click', async () => {
+    if (initQueue.length === 0) {
+        alert('Очередь инициативы пуста');
+        return;
+    }
+
+    // Сортируем по убыванию
+    const sorted = [...initQueue].sort((a, b) => b.total - a.total);
+    const turnOrder = sorted.map(item => ({
+        id: item.charId,
+        initiative: item.total,
+        name: item.name
+    }));
+
+    try {
         await updateDoc(battleRef, {
             turnOrder: turnOrder,
             currentTurnIndex: 0,
             currentPlayerId: turnOrder.length > 0 ? turnOrder[0].id : null,
             turn: (state.battleData?.turn || 0) + 1
         });
-
-        addLogEntry(`🎲 Инициатива: ${turnOrder.map((t, i) => `${i + 1}. ${t.name} (${t.initiative})`).join(' → ')}`, 'system');
+        addLogEntry(`⚡ Инициатива применена: ${turnOrder.map((t, i) => `${i + 1}. ${t.name} (${t.initiative})`).join(' → ')}`, 'system');
+        initQueue.length = 0;
+        renderInitQueue();
     } catch (err) {
         console.error(err);
-        addLogEntry(`❌ Ошибка инициативы: ${err.message}`, 'system');
+        alert('Ошибка применения инициативы: ' + err.message);
     }
 });
+
+// Очистка очереди
+document.getElementById('init-clear-btn')?.addEventListener('click', () => {
+    if (initQueue.length === 0) return;
+    if (confirm('Очистить очередь инициативы?')) {
+        initQueue.length = 0;
+        renderInitQueue();
+        addLogEntry('🗑️ Очередь инициативы очищена', 'system');
+    }
+});
+
+// Отрисовка очереди
+function renderInitQueue() {
+    const container = document.getElementById('init-queue');
+    if (!container) return;
+    if (initQueue.length === 0) {
+        container.innerHTML = '<span style="color:#554444; font-size:13px;">Очередь пуста</span>';
+        return;
+    }
+    // Сортируем для отображения
+    const sorted = [...initQueue].sort((a, b) => b.total - a.total);
+    container.innerHTML = sorted.map((item, index) =>
+        `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>${item.name}</strong> (Ag: ${item.agBonus}) → бросок ${item.roll} = <span class="dice-roll">${item.total}</span></span>
+            <button class="tab-btn" style="padding:2px 8px; font-size:11px; background:#3a1a1a;" data-charid="${item.charId}">✕</button>
+        </div>`
+    ).join('');
+
+    // Обработчики удаления из очереди
+    container.querySelectorAll('button[data-charid]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const charId = btn.dataset.charid;
+            const index = initQueue.findIndex(item => item.charId === charId);
+            if (index !== -1) {
+                initQueue.splice(index, 1);
+                renderInitQueue();
+                addLogEntry(`❌ Удалён из очереди инициативы`, 'system');
+            }
+        });
+    });
+}
+
+// Подписываемся на обновление селекта при изменении состава боя
+// (вызываем в updateCombatants)
 
 // ============================================================
 // 8. СЛЕДУЮЩИЙ ХОД
