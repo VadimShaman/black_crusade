@@ -701,7 +701,47 @@ document.getElementById('end-battle-btn')?.addEventListener('click', async () =>
         alert('Ошибка: ' + err.message);
     }
 });
+// ============================================================
+// 8.3. ПРЕДЫДУЩИЙ ХОД
+// ============================================================
+document.getElementById('prev-turn-btn')?.addEventListener('click', async () => {
+    try {
+        const data = state.battleData;
+        if (!data) return;
+        const turnOrder = data.turnOrder || [];
+        if (turnOrder.length === 0) {
+            alert('Нет очереди инициативы');
+            return;
+        }
 
+        let prevIndex = (data.currentTurnIndex || 0) - 1;
+        let attempts = 0;
+        const maxAttempts = turnOrder.length * 2;
+
+        while (attempts < maxAttempts) {
+            if (prevIndex < 0) prevIndex = turnOrder.length - 1;
+            const prevId = turnOrder[prevIndex]?.id;
+            if (prevId && data.characters[prevId]?.isActive !== false) break;
+            prevIndex--;
+            attempts++;
+        }
+
+        if (attempts >= maxAttempts) {
+            alert('Нет живых участников для возврата');
+            return;
+        }
+
+        await updateDoc(battleRef, {
+            currentTurnIndex: prevIndex,
+            currentPlayerId: turnOrder[prevIndex].id
+            // Раунд НЕ меняем
+        });
+        addLogEntry(`⬅️ Возврат к ходу участника ${turnOrder[prevIndex].name}`, 'system');
+    } catch (err) {
+        console.error(err);
+        alert('Ошибка: ' + err.message);
+    }
+});
 // ============================================================
 // 9. АТАКА
 // ============================================================
