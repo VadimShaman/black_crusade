@@ -702,7 +702,7 @@ document.getElementById('end-battle-btn')?.addEventListener('click', async () =>
     }
 });
 // ============================================================
-// 8.3. ПРЕДЫДУЩИЙ ХОД
+// 8.3. ПРЕДЫДУЩИЙ ХОД (С КОРРЕКТНЫМ РАУНДОМ)
 // ============================================================
 document.getElementById('prev-turn-btn')?.addEventListener('click', async () => {
     try {
@@ -714,12 +714,17 @@ document.getElementById('prev-turn-btn')?.addEventListener('click', async () => 
             return;
         }
 
-        let prevIndex = (data.currentTurnIndex || 0) - 1;
+        const currentIndex = data.currentTurnIndex || 0;
+        let prevIndex = currentIndex - 1;
         let attempts = 0;
         const maxAttempts = turnOrder.length * 2;
+        let crossedRound = false;
 
         while (attempts < maxAttempts) {
-            if (prevIndex < 0) prevIndex = turnOrder.length - 1;
+            if (prevIndex < 0) {
+                prevIndex = turnOrder.length - 1;
+                crossedRound = true; // Перешли через границу раунда
+            }
             const prevId = turnOrder[prevIndex]?.id;
             if (prevId && data.characters[prevId]?.isActive !== false) break;
             prevIndex--;
@@ -731,12 +736,19 @@ document.getElementById('prev-turn-btn')?.addEventListener('click', async () => 
             return;
         }
 
+        // Новый раунд: уменьшаем, если перешли через границу
+        const newTurn = crossedRound ? Math.max(0, (data.turn || 0) - 1) : (data.turn || 0);
+
         await updateDoc(battleRef, {
             currentTurnIndex: prevIndex,
-            currentPlayerId: turnOrder[prevIndex].id
-            // Раунд НЕ меняем
+            currentPlayerId: turnOrder[prevIndex].id,
+            turn: newTurn
         });
-        addLogEntry(`⬅️ Возврат к ходу участника ${turnOrder[prevIndex].name}`, 'system');
+
+        const logMessage = crossedRound
+            ? `⬅️ Возврат к ходу участника ${turnOrder[prevIndex].name} (раунд ${newTurn})`
+            : `⬅️ Возврат к ходу участника ${turnOrder[prevIndex].name}`;
+        addLogEntry(logMessage, 'system');
     } catch (err) {
         console.error(err);
         alert('Ошибка: ' + err.message);
