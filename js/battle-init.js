@@ -185,7 +185,140 @@ function addSimpleCharacter(role, isNPC = true) {
 
     addCharacterToBattle(charData);
 }
+// ============================================================
+// 5.5. РЕДАКТИРОВАНИЕ ПЕРСОНАЖА
+// ============================================================
+function openEditForm(charId, charData) {
+    const modal = document.createElement('div');
+    modal.id = 'edit-char-modal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;
+        z-index: 1000; padding: 20px;
+    `;
 
+    modal.innerHTML = `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
+                    padding: 24px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;">
+            <h2 style="color: var(--accent-glow); margin-top: 0;">✏️ Редактирование: ${charData.name}</h2>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="color: #887777; display: block; font-size: 13px;">Имя</label>
+                <input type="text" id="edit-char-name" value="${charData.name || ''}"
+                       style="width: 100%; padding: 8px; background: #0a0808; border: 1px solid var(--border-color);
+                              color: var(--text-light); border-radius: 4px;">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">WS</label>
+                    <input type="number" id="edit-ws" value="${charData.ws || 30}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">BS</label>
+                    <input type="number" id="edit-bs" value="${charData.bs || 30}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">S</label>
+                    <input type="number" id="edit-s" value="${charData.s || 30}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">T</label>
+                    <input type="number" id="edit-t" value="${charData.t || 30}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">Ag</label>
+                    <input type="number" id="edit-ag" value="${charData.ag || 30}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">WP</label>
+                    <input type="number" id="edit-wp" value="${charData.wp || 30}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">❤️ Раны (max)</label>
+                    <input type="number" id="edit-wounds" value="${charData.maxWounds || 12}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">🛡️ Броня (тело)</label>
+                    <input type="number" id="edit-armor" value="${charData.armor?.body || 0}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 16px;">
+                <button id="edit-submit-btn" style="flex: 1; padding: 10px; background: var(--primary-red); border: none;
+                        color: #fff; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    💾 Сохранить
+                </button>
+                <button id="edit-cancel-btn" style="flex: 1; padding: 10px; background: #2a2a3e; border: none;
+                        color: var(--text-light); border-radius: 4px; cursor: pointer;">
+                    ❌ Отмена
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#edit-cancel-btn').addEventListener('click', () => modal.remove());
+    modal.querySelector('#edit-submit-btn').addEventListener('click', async () => {
+        const updatedData = {
+            name: modal.querySelector('#edit-char-name').value.trim() || charData.name,
+            ws: parseInt(modal.querySelector('#edit-ws').value) || 30,
+            bs: parseInt(modal.querySelector('#edit-bs').value) || 30,
+            s: parseInt(modal.querySelector('#edit-s').value) || 30,
+            t: parseInt(modal.querySelector('#edit-t').value) || 30,
+            ag: parseInt(modal.querySelector('#edit-ag').value) || 30,
+            wp: parseInt(modal.querySelector('#edit-wp').value) || 30,
+            maxWounds: parseInt(modal.querySelector('#edit-wounds').value) || 12,
+            armor: {
+                ...charData.armor,
+                body: parseInt(modal.querySelector('#edit-armor').value) || 0
+            }
+        };
+
+        try {
+            await updateDoc(battleRef, {
+                [`characters.${charId}.name`]: updatedData.name,
+                [`characters.${charId}.ws`]: updatedData.ws,
+                [`characters.${charId}.bs`]: updatedData.bs,
+                [`characters.${charId}.s`]: updatedData.s,
+                [`characters.${charId}.t`]: updatedData.t,
+                [`characters.${charId}.ag`]: updatedData.ag,
+                [`characters.${charId}.wp`]: updatedData.wp,
+                [`characters.${charId}.maxWounds`]: updatedData.maxWounds,
+                [`characters.${charId}.armor.body`]: updatedData.armor.body
+            });
+            addLogEntry(`✏️ ${updatedData.name} обновлён`, 'system');
+            modal.remove();
+        } catch (err) {
+            console.error(err);
+            alert('Ошибка обновления: ' + err.message);
+        }
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
 // ============================================================
 // 6. ОБРАБОТЧИКИ ДОБАВЛЕНИЯ
 // ============================================================
@@ -405,7 +538,78 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
         alert('Ошибка атаки: ' + err.message);
     }
 });
+function updateCombatants(data) {
+    if (!combatantsList) return;
+    const chars = data.characters || {};
+    const turnOrder = data.turnOrder || [];
+    const entries = Object.entries(chars);
 
+    totalCombatants.textContent = entries.length;
+    activeCombatants.textContent = entries.filter(([_, c]) => c.isActive !== false).length;
+
+    // ===== ОБНОВЛЯЕМ СЕЛЕКТЫ ДЛЯ АТАКИ =====
+    const attackerSelect = document.getElementById('attacker-select');
+    const defenderSelect = document.getElementById('defender-select');
+    if (attackerSelect) {
+        attackerSelect.innerHTML = '<option value="">Атакующий</option>';
+        entries.forEach(([id, char]) => {
+            if (char.isActive !== false && char.status !== 'dead') {
+                attackerSelect.innerHTML += `<option value="${id}">${char.name} (${char.role || 'NPC'})</option>`;
+            }
+        });
+    }
+    if (defenderSelect) {
+        defenderSelect.innerHTML = '<option value="">Цель</option>';
+        entries.forEach(([id, char]) => {
+            if (char.isActive !== false && char.status !== 'dead') {
+                defenderSelect.innerHTML += `<option value="${id}">${char.name} (${char.role || 'NPC'})</option>`;
+            }
+        });
+    }
+    // ===== КОНЕЦ ОБНОВЛЕНИЯ СЕЛЕКТОВ =====
+
+    if (entries.length === 0) {
+        combatantsList.innerHTML = '<div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>';
+        return;
+    }
+
+    let html = '';
+    for (const [id, char] of entries) {
+        const isActive = char.isActive !== false;
+        const isDead = char.status === 'dead';
+        const isCurrent = turnOrder[data.currentTurnIndex]?.id === id;
+        const hpPercent = char.maxWounds ? Math.round((char.wounds / char.maxWounds) * 100) : 100;
+
+        html += `
+            <div class="combatant-card ${isCurrent ? 'active-turn' : ''} ${isDead ? 'dead' : ''}" data-id="${id}">
+                <div>
+                    <strong>${char.name || 'Безымянный'}</strong>
+                    ${char.playerName ? `<span style="color:#887777; font-size:12px;">(${char.playerName})</span>` : ''}
+                    <span style="color:#887777; font-size:11px; margin-left:6px;">[${char.role || 'NPC'}]</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:13px; ${hpPercent < 25 ? 'color:#cc4444;' : ''}">
+                        ${isDead ? '💀' : `${char.wounds}/${char.maxWounds}`}
+                    </span>
+                    <span class="status-badge ${char.status || 'alive'}">${char.status || 'alive'}</span>
+                    <button class="tab-btn edit-char-btn" data-id="${id}" style="padding:2px 8px; font-size:11px; background:#1a2a3a;">✏️</button>
+                </div>
+            </div>
+        `;
+    }
+    combatantsList.innerHTML = html;
+
+    // ===== ОБРАБОТЧИКИ ДЛЯ РЕДАКТИРОВАНИЯ =====
+    document.querySelectorAll('.edit-char-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const charId = btn.dataset.id;
+            const char = data.characters[charId];
+            if (!char) return;
+            openEditForm(charId, char);
+        });
+    });
+}
 // ============================================================
 // 10. КУБЫ
 // ============================================================
@@ -472,16 +676,27 @@ if (savedNotes && document.getElementById('gm-notes')) {
 // ============================================================
 // 12. ЭКСПОРТ/ИМПОРТ ЛОГА
 // ============================================================
-document.getElementById('export-log-btn')?.addEventListener('click', () => {
-    if (!state.battleData?.log) return alert('Нет лога для экспорта');
-    const data = JSON.stringify(state.battleData.log, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `battle_log_${state.battleId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+document.getElementById('export-log-btn')?.addEventListener('click', async () => {
+    try {
+        const battleSnap = await getDoc(battleRef);
+        if (!battleSnap.exists()) throw new Error('Бой не найден');
+        const data = battleSnap.data();
+        const log = data.log || [];
+        if (log.length === 0) {
+            alert('Нет записей в логе для экспорта');
+            return;
+        }
+        const json = JSON.stringify(log, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `battle_log_${state.battleId}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert('Ошибка экспорта: ' + err.message);
+    }
 });
 
 document.getElementById('import-log-btn')?.addEventListener('click', () => {
