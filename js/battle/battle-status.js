@@ -1,7 +1,6 @@
 // js/battle/battle-status.js
 import { db } from '../firebase-config.js';
 import { doc, getDoc, updateDoc, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { addLog } from './battle-core.js';
 import { addLog } from './battle-log.js';
 
 // ============================================================
