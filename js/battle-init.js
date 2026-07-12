@@ -140,151 +140,90 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
 });
 
 // ============================================================
-// 5. ДОБАВЛЕНИЕ ПЕРСОНАЖА (С ПОЛНЫМИ СТАТАМИ)
+// 5. ДОБАВЛЕНИЕ ПЕРСОНАЖА (УПРОЩЁННОЕ)
 // ============================================================
 
-// Функция для открытия формы добавления персонажа
-function openCharacterForm(role = 'Игрок', isNPC = false) {
-    // Создаём модальное окно
-    const modal = document.createElement('div');
-    modal.id = 'char-modal';
-    modal.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;
-        z-index: 1000; padding: 20px;
-    `;
+function addSimpleCharacter(role, isNPC = true) {
+    const name = prompt(`Имя ${role}:`, role === 'Игрок' ? 'Воин Хаоса' : `${role}`);
+    if (!name) return;
+    const playerName = isNPC ? 'GM' : (prompt('Имя игрока:', 'Игрок') || 'Игрок');
 
-    modal.innerHTML = `
-        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; 
-                    padding: 24px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;">
-            <h2 style="color: var(--accent-glow); margin-top: 0;">👤 Добавление: ${role}</h2>
-            
-            <div style="margin-bottom: 12px;">
-                <label style="color: #887777; display: block; font-size: 13px;">Имя персонажа</label>
-                <input type="text" id="form-char-name" value="${role === 'Игрок' ? 'Воин Хаоса' : role}" 
-                       style="width: 100%; padding: 8px; background: #0a0808; border: 1px solid var(--border-color); 
-                              color: var(--text-light); border-radius: 4px;">
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">WS</label>
-                    <input type="number" id="form-ws" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">BS</label>
-                    <input type="number" id="form-bs" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">S</label>
-                    <input type="number" id="form-s" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">T</label>
-                    <input type="number" id="form-t" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">Ag</label>
-                    <input type="number" id="form-ag" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">WP</label>
-                    <input type="number" id="form-wp" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">❤️ Раны (max)</label>
-                    <input type="number" id="form-wounds" value="12" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-                <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">🛡️ Броня (тело)</label>
-                    <input type="number" id="form-armor" value="2" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
-                </div>
-            </div>
-            
-            ${!isNPC ? `
-            <div style="margin-bottom: 12px;">
-                <label style="color: #887777; display: block; font-size: 13px;">Имя игрока</label>
-                <input type="text" id="form-player-name" value="Игрок" 
-                       style="width: 100%; padding: 8px; background: #0a0808; border: 1px solid var(--border-color); 
-                              color: var(--text-light); border-radius: 4px;">
-            </div>
-            ` : ''}
-            
-            <div style="display: flex; gap: 10px; margin-top: 16px;">
-                <button id="form-submit-btn" style="flex: 1; padding: 10px; background: var(--primary-red); border: none; 
-                        color: #fff; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                    ✅ Добавить
-                </button>
-                <button id="form-cancel-btn" style="flex: 1; padding: 10px; background: #2a2a3e; border: none; 
-                        color: var(--text-light); border-radius: 4px; cursor: pointer;">
-                    ❌ Отмена
-                </button>
-            </div>
-        </div>
-    `;
+    const charData = {
+        name: name,
+        ws: 30, bs: 30, s: 30, t: 30, ag: 30, int: 30, per: 30, wp: 30, fel: 30,
+        wounds: 12, maxWounds: 12,
+        armor: { head: 0, body: 2, arms: 0, legs: 0 },
+        weapon: 'Кулак',
+        traits: [],
+        status: 'alive',
+        isNPC: isNPC,
+        role: role,
+        playerName: playerName,
+        // Для союзников и врагов — метка
+        ally: role === 'Союзник',
+        enemy: role === 'Враг'
+    };
 
-    document.body.appendChild(modal);
-
-    // Обработчики
-    modal.querySelector('#form-cancel-btn').addEventListener('click', () => modal.remove());
-    modal.querySelector('#form-submit-btn').addEventListener('click', async () => {
-        const name = modal.querySelector('#form-char-name').value.trim() || 'Безымянный';
-        const playerName = modal.querySelector('#form-player-name')?.value.trim() || 'GM';
-
-        const charData = {
-            name: name,
-            ws: parseInt(modal.querySelector('#form-ws').value) || 30,
-            bs: parseInt(modal.querySelector('#form-bs').value) || 30,
-            s: parseInt(modal.querySelector('#form-s').value) || 30,
-            t: parseInt(modal.querySelector('#form-t').value) || 30,
-            ag: parseInt(modal.querySelector('#form-ag').value) || 30,
-            wp: parseInt(modal.querySelector('#form-wp').value) || 30,
-            int: 30, per: 30, fel: 30,
-            wounds: parseInt(modal.querySelector('#form-wounds').value) || 12,
-            maxWounds: parseInt(modal.querySelector('#form-wounds').value) || 12,
-            armor: {
-                head: 0,
-                body: parseInt(modal.querySelector('#form-armor').value) || 0,
-                arms: 0,
-                legs: 0
-            },
-            weapon: 'Кулак',
-            traits: [],
-            status: 'alive',
-            isNPC: isNPC,
-            role: role,
-            playerName: isNPC ? 'GM' : playerName
-        };
-
-        try {
-            const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-            await updateDoc(battleRef, {
-                [`characters.${charId}`]: {
-                    ...charData,
-                    id: charId,
-                    conditions: [],
-                    isActive: true,
-                    joinedAt: serverTimestamp()
-                },
-                turnOrder: arrayUnion({ id: charId, initiative: 0, name: charData.name || 'Безымянный' })
-            });
-            addLogEntry(`👤 ${name} (${charData.role}) добавлен в бой`, 'system');
-            modal.remove();
-        } catch (err) {
-            console.error(err);
-            alert('Ошибка добавления: ' + err.message);
-        }
-    });
-
-    // Закрытие по клику вне окна
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
+    addCharacterToBattle(charData);
 }
 
+async function addCharacterToBattle(charData) {
+    try {
+        const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        await updateDoc(battleRef, {
+            [`characters.${charId}`]: {
+                ...charData,
+                id: charId,
+                conditions: [],
+                isActive: true,
+                joinedAt: serverTimestamp()
+            },
+            turnOrder: arrayUnion({ id: charId, initiative: 0, name: charData.name || 'Безымянный' })
+        });
+        addLogEntry(`👤 ${charData.name} (${charData.role}) добавлен в бой`, 'system');
+    } catch (err) {
+        console.error(err);
+        alert('Ошибка добавления: ' + err.message);
+    }
+}
+
+// Обработчики
+document.getElementById('add-player-btn')?.addEventListener('click', () => addSimpleCharacter('Игрок', false));
+document.getElementById('add-ally-btn')?.addEventListener('click', () => addSimpleCharacter('Союзник', true));
+document.getElementById('add-enemy-btn')?.addEventListener('click', () => addSimpleCharacter('Враг', true));
+document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
+    const template = prompt('Выберите шаблон NPC (cultist, beastman, albino, flamingPredator, gregor):', 'beastman');
+    if (!template || !NPC_TEMPLATES[template]) {
+        alert('Неверный шаблон. Доступны: cultist, beastman, albino, flamingPredator, gregor');
+        return;
+    }
+    const npc = { ...NPC_TEMPLATES[template] };
+    const name = prompt('Имя NPC (оставьте пустым для шаблонного):', npc.name);
+    if (name && name.trim()) npc.name = name.trim();
+
+    try {
+        const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const charData = {
+            ...npc,
+            id: charId,
+            wounds: npc.maxWounds || npc.wounds || 10,
+            maxWounds: npc.maxWounds || npc.wounds || 10,
+            conditions: [],
+            isActive: true,
+            playerName: 'GM',
+            role: 'NPC',
+            joinedAt: serverTimestamp()
+        };
+        await updateDoc(battleRef, {
+            [`characters.${charId}`]: charData,
+            turnOrder: arrayUnion({ id: charId, initiative: 0, name: charData.name || 'Безымянный' })
+        });
+        addLogEntry(`👹 Призван ${npc.name}`, 'system');
+    } catch (err) {
+        console.error(err);
+        alert('Ошибка добавления NPC: ' + err.message);
+    }
+});
 // ============================================================
 // 6. ОБРАБОТЧИКИ КНОПОК ДОБАВЛЕНИЯ
 // ============================================================
@@ -461,6 +400,119 @@ const savedNotes = localStorage.getItem(`battle_${state.battleId}_notes`);
 if (savedNotes && document.getElementById('gm-notes')) {
     document.getElementById('gm-notes').value = savedNotes;
 }
+// ============================================================
+// 6. АТАКА (РАБОЧАЯ ВЕРСИЯ)
+// ============================================================
+document.getElementById('attack-btn')?.addEventListener('click', async () => {
+    const attackerId = document.getElementById('attacker-select')?.value;
+    const defenderId = document.getElementById('defender-select')?.value;
+    const weaponName = document.getElementById('weapon-name-input')?.value || 'Кулак';
+    const threshold = parseInt(document.getElementById('attack-threshold-input')?.value) || 45;
+    const damageDice = document.getElementById('damage-dice-input')?.value || '1d10';
+    const modifier = parseInt(document.getElementById('modifier-input')?.value) || 0;
+    const isFull = document.getElementById('full-attack-check')?.checked || false;
+    const isAllOut = document.getElementById('all-out-check')?.checked || false;
+
+    if (!attackerId || !defenderId) {
+        alert('Выберите атакующего и цель');
+        return;
+    }
+    if (attackerId === defenderId) {
+        alert('Нельзя атаковать самого себя');
+        return;
+    }
+
+    try {
+        const data = state.battleData;
+        if (!data) throw new Error('Данные боя не загружены');
+        const attacker = data.characters[attackerId];
+        const defender = data.characters[defenderId];
+        if (!attacker || !defender) throw new Error('Персонаж не найден');
+        if (!attacker.isActive || !defender.isActive) throw new Error('Персонаж не активен');
+
+        // Бросок атаки
+        const target = threshold + modifier + (isFull ? 10 : 0) + (isAllOut ? 30 : 0);
+        const roll = Math.floor(Math.random() * 100) + 1;
+        const isSuccess = roll <= target;
+        const degrees = isSuccess ? Math.floor((target - roll) / 10) + 1 : Math.floor((roll - target) / 10) + 1;
+        const hitLocation = ['Голова', 'Правая рука', 'Левая рука', 'Торс', 'Правая нога', 'Левая нога'][Math.floor(Math.random() * 6)];
+
+        // Парсим кубы урона
+        let finalDamage = 0;
+        let damageRolls = [];
+        if (isSuccess) {
+            try {
+                const match = damageDice.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
+                if (match) {
+                    const count = parseInt(match[1]) || 1;
+                    const sides = parseInt(match[2]);
+                    const mod = parseInt(match[3] || '0');
+                    let total = 0;
+                    for (let i = 0; i < count; i++) {
+                        const r = Math.floor(Math.random() * sides) + 1;
+                        damageRolls.push(r);
+                        total += r;
+                    }
+                    finalDamage = total + mod + Math.floor((degrees - 1) / 2);
+                    if (finalDamage < 0) finalDamage = 0;
+                } else {
+                    finalDamage = parseInt(damageDice) || 0;
+                }
+            } catch (e) {
+                finalDamage = 0;
+            }
+
+            // Применяем урон (с броней)
+            const armor = defender.armor || { head: 0, body: 0, arms: 0, legs: 0 };
+            const armorValue = armor[hitLocation.toLowerCase()] || 0;
+            finalDamage = Math.max(0, finalDamage - armorValue);
+        }
+
+        // Обновляем раны
+        if (isSuccess && finalDamage > 0) {
+            const newWounds = defender.wounds - finalDamage;
+            const isDead = newWounds <= -defender.maxWounds;
+            await updateDoc(battleRef, {
+                [`characters.${defenderId}.wounds`]: newWounds,
+                [`characters.${defenderId}.status`]: isDead ? 'dead' : (newWounds <= 0 ? 'critical' : 'alive'),
+                [`characters.${defenderId}.isActive`]: !isDead
+            });
+            if (isDead) {
+                const kills = (data.kills || 0) + 1;
+                await updateDoc(battleRef, { kills: kills });
+                if (killCounter) killCounter.textContent = kills;
+            }
+        }
+
+        // Лог
+        const successText = isSuccess ? '✅ ПОПАДАНИЕ' : '❌ ПРОМАХ';
+        const damageText = isSuccess && finalDamage > 0
+            ? `💥 Урон: ${finalDamage} [${damageRolls.join(', ')}]`
+            : (isSuccess ? '🛡️ Урон поглощён броней' : '');
+        const logText = `${attacker.name} → ${defender.name}: ${successText} (${roll}/${target}) ${damageText}`;
+        addLogEntry(logText, isSuccess ? 'damage' : 'system');
+
+        // Результат
+        if (attackResult) {
+            attackResult.style.display = 'block';
+            attackResult.innerHTML = `
+                <div><strong>${attacker.name}</strong> → <strong>${defender.name}</strong></div>
+                <div>⚔️ ${weaponName}</div>
+                <div>🎯 Бросок: ${roll} (Цель: ${target}) ${isSuccess ? '✅' : '❌'}</div>
+                <div>📊 Успехов: ${isSuccess ? '+' : ''}${degrees}</div>
+                <div>🎯 Место: ${hitLocation}</div>
+                <div>🎲 Кубы: ${damageDice} → ${isSuccess ? finalDamage : 'промах'}</div>
+                ${damageRolls.length > 0 ? `<div>🎲 Броски: [${damageRolls.join(', ')}]</div>` : ''}
+                ${isSuccess && finalDamage > 0 ? `<div style="color:#cc4444; font-weight:bold;">💥 Урон: ${finalDamage}</div>` : ''}
+                ${isSuccess && finalDamage === 0 ? '<div style="color:#887777;">🛡️ Урон поглощён броней</div>' : ''}
+                ${!isSuccess ? '<div style="color:#887777;">❌ Промах</div>' : ''}
+            `;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Ошибка атаки: ' + err.message);
+    }
+});
 // ============================================================
 // 7. КУБЫ (НОВАЯ ВЕРСИЯ)
 // ============================================================
