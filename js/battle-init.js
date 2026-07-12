@@ -393,6 +393,105 @@ if (savedNotes && $('gm-notes')) {
 // ============================================================
 window.addEventListener('beforeunload', () => {
     if (state.unsubscribe) state.unsubscribe();
+    // ============================================================
+    // 7. АКТИВАЦИЯ КНОПОК
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        // Проверяем, что элементы существуют
+        const rollInitBtn = document.getElementById('roll-init-btn');
+        const nextTurnBtn = document.getElementById('next-turn-btn');
+        const addNpcBtn = document.getElementById('add-npc-btn');
+        const addPlayerBtn = document.getElementById('add-player-btn');
+        const attackBtn = document.getElementById('attack-btn');
+        const diceD100 = document.getElementById('dice-d100');
+        const diceD10 = document.getElementById('dice-d10');
+        const diceD5 = document.getElementById('dice-d5');
+        const diceCustom = document.getElementById('dice-custom');
+        const saveNotesBtn = document.getElementById('save-notes-btn');
+
+        // Временные заглушки — чтобы кнопки реагировали
+        if (rollInitBtn) {
+            rollInitBtn.addEventListener('click', () => {
+                console.log('🎲 Инициатива нажата');
+                alert('Инициатива будет работать после полной настройки');
+            });
+        }
+
+        if (nextTurnBtn) {
+            nextTurnBtn.addEventListener('click', () => {
+                console.log('⏩ Следующий ход нажат');
+                alert('Переход хода будет работать после полной настройки');
+            });
+        }
+
+        if (addNpcBtn) {
+            addNpcBtn.addEventListener('click', () => {
+                console.log('👹 Добавить NPC нажата');
+                const name = prompt('Введите имя NPC:', 'Культист');
+                if (name) {
+                    alert(`NPC ${name} добавлен (временная заглушка)`);
+                }
+            });
+        }
+
+        if (addPlayerBtn) {
+            addPlayerBtn.addEventListener('click', () => {
+                console.log('👤 Добавить игрока нажата');
+                const name = prompt('Введите имя игрока:', 'Воин Хаоса');
+                if (name) {
+                    alert(`Игрок ${name} добавлен (временная заглушка)`);
+                }
+            });
+        }
+
+        if (attackBtn) {
+            attackBtn.addEventListener('click', () => {
+                console.log('💥 Атака нажата');
+                const attacker = document.getElementById('attacker-select')?.value || 'Атакующий';
+                const defender = document.getElementById('defender-select')?.value || 'Цель';
+                alert(`⚔️ ${attacker} атакует ${defender} (временная заглушка)`);
+            });
+        }
+
+        if (diceD100) {
+            diceD100.addEventListener('click', () => {
+                const result = Math.floor(Math.random() * 100) + 1;
+                alert(`🎲 d100: ${result}`);
+            });
+        }
+
+        if (diceD10) {
+            diceD10.addEventListener('click', () => {
+                const result = Math.floor(Math.random() * 10) + 1;
+                alert(`🎲 d10: ${result}`);
+            });
+        }
+
+        if (diceD5) {
+            diceD5.addEventListener('click', () => {
+                const result = Math.floor(Math.random() * 5) + 1;
+                alert(`🎲 d5: ${result}`);
+            });
+        }
+
+        if (diceCustom) {
+            diceCustom.addEventListener('click', () => {
+                const sides = parseInt(document.getElementById('dice-custom-input')?.value) || 20;
+                const result = Math.floor(Math.random() * sides) + 1;
+                alert(`🎲 d${sides}: ${result}`);
+            });
+        }
+
+        if (saveNotesBtn) {
+            saveNotesBtn.addEventListener('click', () => {
+                const notes = document.getElementById('gm-notes')?.value || '';
+                localStorage.setItem(`battle_${state.battleId}_notes`, notes);
+                alert('📝 Заметки сохранены!');
+            });
+        }
+
+        console.log('✅ Все кнопки активированы (временные заглушки)');
+    });
 });
 
 console.log('🔥 Боевая комната загружена! ID:', state.battleId);
