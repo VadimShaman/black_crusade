@@ -140,78 +140,160 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
 });
 
 // ============================================================
-// 5. ОБРАБОТЧИКИ СОБЫТИЙ (АКТИВАЦИЯ КНОПОК)
+// 5. ДОБАВЛЕНИЕ ПЕРСОНАЖА (С ПОЛНЫМИ СТАТАМИ)
 // ============================================================
 
-// 5.1. Инициатива
-document.getElementById('roll-init-btn')?.addEventListener('click', async () => {
-    console.log('🎲 Инициатива нажата');
-    try {
-        const chars = state.battleData?.characters || {};
-        const turnOrder = [];
-        for (const [id, char] of Object.entries(chars)) {
-            if (!char.isActive) continue;
-            const agBonus = Math.floor((char.ag || 25) / 10);
-            const roll = Math.floor(Math.random() * 10) + 1;
-            turnOrder.push({ id, initiative: roll + agBonus, name: char.name || 'Безымянный' });
+// Функция для открытия формы добавления персонажа
+function openCharacterForm(role = 'Игрок', isNPC = false) {
+    // Создаём модальное окно
+    const modal = document.createElement('div');
+    modal.id = 'char-modal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;
+        z-index: 1000; padding: 20px;
+    `;
+
+    modal.innerHTML = `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; 
+                    padding: 24px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;">
+            <h2 style="color: var(--accent-glow); margin-top: 0;">👤 Добавление: ${role}</h2>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="color: #887777; display: block; font-size: 13px;">Имя персонажа</label>
+                <input type="text" id="form-char-name" value="${role === 'Игрок' ? 'Воин Хаоса' : role}" 
+                       style="width: 100%; padding: 8px; background: #0a0808; border: 1px solid var(--border-color); 
+                              color: var(--text-light); border-radius: 4px;">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">WS</label>
+                    <input type="number" id="form-ws" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">BS</label>
+                    <input type="number" id="form-bs" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">S</label>
+                    <input type="number" id="form-s" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">T</label>
+                    <input type="number" id="form-t" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">Ag</label>
+                    <input type="number" id="form-ag" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">WP</label>
+                    <input type="number" id="form-wp" value="30" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">❤️ Раны (max)</label>
+                    <input type="number" id="form-wounds" value="12" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">🛡️ Броня (тело)</label>
+                    <input type="number" id="form-armor" value="2" style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color); color: var(--text-light); border-radius: 4px;">
+                </div>
+            </div>
+            
+            ${!isNPC ? `
+            <div style="margin-bottom: 12px;">
+                <label style="color: #887777; display: block; font-size: 13px;">Имя игрока</label>
+                <input type="text" id="form-player-name" value="Игрок" 
+                       style="width: 100%; padding: 8px; background: #0a0808; border: 1px solid var(--border-color); 
+                              color: var(--text-light); border-radius: 4px;">
+            </div>
+            ` : ''}
+            
+            <div style="display: flex; gap: 10px; margin-top: 16px;">
+                <button id="form-submit-btn" style="flex: 1; padding: 10px; background: var(--primary-red); border: none; 
+                        color: #fff; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    ✅ Добавить
+                </button>
+                <button id="form-cancel-btn" style="flex: 1; padding: 10px; background: #2a2a3e; border: none; 
+                        color: var(--text-light); border-radius: 4px; cursor: pointer;">
+                    ❌ Отмена
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Обработчики
+    modal.querySelector('#form-cancel-btn').addEventListener('click', () => modal.remove());
+    modal.querySelector('#form-submit-btn').addEventListener('click', async () => {
+        const name = modal.querySelector('#form-char-name').value.trim() || 'Безымянный';
+        const playerName = modal.querySelector('#form-player-name')?.value.trim() || 'GM';
+
+        const charData = {
+            name: name,
+            ws: parseInt(modal.querySelector('#form-ws').value) || 30,
+            bs: parseInt(modal.querySelector('#form-bs').value) || 30,
+            s: parseInt(modal.querySelector('#form-s').value) || 30,
+            t: parseInt(modal.querySelector('#form-t').value) || 30,
+            ag: parseInt(modal.querySelector('#form-ag').value) || 30,
+            wp: parseInt(modal.querySelector('#form-wp').value) || 30,
+            int: 30, per: 30, fel: 30,
+            wounds: parseInt(modal.querySelector('#form-wounds').value) || 12,
+            maxWounds: parseInt(modal.querySelector('#form-wounds').value) || 12,
+            armor: {
+                head: 0,
+                body: parseInt(modal.querySelector('#form-armor').value) || 0,
+                arms: 0,
+                legs: 0
+            },
+            weapon: 'Кулак',
+            traits: [],
+            status: 'alive',
+            isNPC: isNPC,
+            role: role,
+            playerName: isNPC ? 'GM' : playerName
+        };
+
+        try {
+            const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            await updateDoc(battleRef, {
+                [`characters.${charId}`]: {
+                    ...charData,
+                    id: charId,
+                    conditions: [],
+                    isActive: true,
+                    joinedAt: serverTimestamp()
+                },
+                turnOrder: arrayUnion({ id: charId, initiative: 0, name: charData.name || 'Безымянный' })
+            });
+            addLogEntry(`👤 ${name} (${charData.role}) добавлен в бой`, 'system');
+            modal.remove();
+        } catch (err) {
+            console.error(err);
+            alert('Ошибка добавления: ' + err.message);
         }
-        turnOrder.sort((a, b) => b.initiative - a.initiative);
+    });
 
-        await updateDoc(battleRef, {
-            turnOrder: turnOrder,
-            currentTurnIndex: 0,
-            currentPlayerId: turnOrder.length > 0 ? turnOrder[0].id : null,
-            turn: (state.battleData?.turn || 0) + 1
-        });
+    // Закрытие по клику вне окна
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
 
-        addLogEntry(`🎲 Инициатива: ${turnOrder.map((t, i) => `${i + 1}. ${t.name} (${t.initiative})`).join(' → ')}`, 'system');
-    } catch (err) {
-        console.error(err);
-        addLogEntry(`❌ Ошибка инициативы: ${err.message}`, 'system');
-    }
-});
+// ============================================================
+// 6. ОБРАБОТЧИКИ КНОПОК ДОБАВЛЕНИЯ
+// ============================================================
+document.getElementById('add-player-btn')?.addEventListener('click', () => openCharacterForm('Игрок', false));
+document.getElementById('add-ally-btn')?.addEventListener('click', () => openCharacterForm('Союзник', true));
+document.getElementById('add-enemy-btn')?.addEventListener('click', () => openCharacterForm('Враг', true));
 
-// 5.2. Следующий ход
-document.getElementById('next-turn-btn')?.addEventListener('click', async () => {
-    console.log('⏩ Следующий ход нажат');
-    try {
-        const data = state.battleData;
-        if (!data) return;
-        const turnOrder = data.turnOrder || [];
-        if (turnOrder.length === 0) return;
-
-        let nextIndex = (data.currentTurnIndex || 0) + 1;
-        let attempts = 0;
-        const maxAttempts = turnOrder.length * 2;
-
-        while (attempts < maxAttempts) {
-            if (nextIndex >= turnOrder.length) nextIndex = 0;
-            const nextId = turnOrder[nextIndex]?.id;
-            if (nextId && data.characters[nextId]?.isActive !== false) break;
-            nextIndex++;
-            attempts++;
-        }
-
-        if (attempts >= maxAttempts) {
-            await updateDoc(battleRef, { isFinished: true, isActive: false });
-            addLogEntry('⚔️ БОЙ ЗАВЕРШЁН (все мертвы)', 'system');
-            return;
-        }
-
-        await updateDoc(battleRef, {
-            currentTurnIndex: nextIndex,
-            currentPlayerId: turnOrder[nextIndex].id,
-            turn: (data.turn || 0) + 1
-        });
-    } catch (err) {
-        console.error(err);
-        addLogEntry(`❌ Ошибка перехода хода: ${err.message}`, 'system');
-    }
-});
-
-// 5.3. Добавить NPC
+// NPC (шаблон) — оставляем старый быстрый способ
 document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
-    console.log('👹 Добавить NPC нажата');
     const template = prompt('Выберите шаблон NPC (cultist, beastman, albino, flamingPredator, gregor):', 'beastman');
     if (!template || !NPC_TEMPLATES[template]) {
         alert('Неверный шаблон. Доступны: cultist, beastman, albino, flamingPredator, gregor');
@@ -243,47 +325,6 @@ document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
         alert('Ошибка добавления NPC: ' + err.message);
     }
 });
-
-// 5.4. Добавить игрока
-document.getElementById('add-player-btn')?.addEventListener('click', async () => {
-    console.log('👤 Добавить игрока нажата');
-    const name = prompt('Имя персонажа:', 'Воин Хаоса');
-    if (!name) return;
-    const playerName = prompt('Имя игрока:', 'Игрок') || 'Игрок';
-
-    const char = {
-        name: name,
-        ws: 30, bs: 30, s: 30, t: 30, ag: 30, int: 30, per: 30, wp: 30, fel: 30,
-        wounds: 12, maxWounds: 12,
-        armor: { head: 0, body: 2, arms: 0, legs: 0 },
-        weapon: 'Кулак',
-        traits: [],
-        status: 'alive',
-        isNPC: false
-    };
-
-    try {
-        const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        await updateDoc(battleRef, {
-            [`characters.${charId}`]: {
-                ...char,
-                id: charId,
-                wounds: char.maxWounds || char.wounds || 10,
-                maxWounds: char.maxWounds || char.wounds || 10,
-                conditions: [],
-                isActive: true,
-                playerName: playerName,
-                joinedAt: serverTimestamp()
-            },
-            turnOrder: arrayUnion({ id: charId, initiative: 0, name: char.name || 'Безымянный' })
-        });
-        addLogEntry(`👤 ${name} (${playerName}) вступил в бой`, 'system');
-    } catch (err) {
-        console.error(err);
-        alert('Ошибка добавления игрока: ' + err.message);
-    }
-});
-
 // ============================================================
 // 5.5. АТАКА (НОВАЯ ВЕРСИЯ)
 // ============================================================
