@@ -83,6 +83,7 @@ function updateCombatants(data) {
                 <div>
                     <strong>${char.name || 'Безымянный'}</strong>
                     ${char.playerName ? `<span style="color:#887777; font-size:12px;">(${char.playerName})</span>` : ''}
+                    <span style="color:#887777; font-size:11px; margin-left:6px;">[${char.role || 'NPC'}]</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:13px; ${hpPercent < 25 ? 'color:#cc4444;' : ''}">
@@ -142,31 +143,6 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
 // ============================================================
 // 5. ДОБАВЛЕНИЕ ПЕРСОНАЖА (УПРОЩЁННОЕ)
 // ============================================================
-
-function addSimpleCharacter(role, isNPC = true) {
-    const name = prompt(`Имя ${role}:`, role === 'Игрок' ? 'Воин Хаоса' : `${role}`);
-    if (!name) return;
-    const playerName = isNPC ? 'GM' : (prompt('Имя игрока:', 'Игрок') || 'Игрок');
-
-    const charData = {
-        name: name,
-        ws: 30, bs: 30, s: 30, t: 30, ag: 30, int: 30, per: 30, wp: 30, fel: 30,
-        wounds: 12, maxWounds: 12,
-        armor: { head: 0, body: 2, arms: 0, legs: 0 },
-        weapon: 'Кулак',
-        traits: [],
-        status: 'alive',
-        isNPC: isNPC,
-        role: role,
-        playerName: playerName,
-        // Для союзников и врагов — метка
-        ally: role === 'Союзник',
-        enemy: role === 'Враг'
-    };
-
-    addCharacterToBattle(charData);
-}
-
 async function addCharacterToBattle(charData) {
     try {
         const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
@@ -187,10 +163,37 @@ async function addCharacterToBattle(charData) {
     }
 }
 
-// Обработчики
+function addSimpleCharacter(role, isNPC = true) {
+    const name = prompt(`Имя ${role}:`, role === 'Игрок' ? 'Воин Хаоса' : `${role}`);
+    if (!name) return;
+    const playerName = isNPC ? 'GM' : (prompt('Имя игрока:', 'Игрок') || 'Игрок');
+
+    const charData = {
+        name: name,
+        ws: 30, bs: 30, s: 30, t: 30, ag: 30, int: 30, per: 30, wp: 30, fel: 30,
+        wounds: 12, maxWounds: 12,
+        armor: { head: 0, body: 2, arms: 0, legs: 0 },
+        weapon: 'Кулак',
+        traits: [],
+        status: 'alive',
+        isNPC: isNPC,
+        role: role,
+        playerName: playerName,
+        ally: role === 'Союзник',
+        enemy: role === 'Враг'
+    };
+
+    addCharacterToBattle(charData);
+}
+
+// ============================================================
+// 6. ОБРАБОТЧИКИ ДОБАВЛЕНИЯ
+// ============================================================
 document.getElementById('add-player-btn')?.addEventListener('click', () => addSimpleCharacter('Игрок', false));
 document.getElementById('add-ally-btn')?.addEventListener('click', () => addSimpleCharacter('Союзник', true));
 document.getElementById('add-enemy-btn')?.addEventListener('click', () => addSimpleCharacter('Враг', true));
+
+// NPC (шаблон)
 document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
     const template = prompt('Выберите шаблон NPC (cultist, beastman, albino, flamingPredator, gregor):', 'beastman');
     if (!template || !NPC_TEMPLATES[template]) {
@@ -224,186 +227,82 @@ document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
         alert('Ошибка добавления NPC: ' + err.message);
     }
 });
-// ============================================================
-// 6. ОБРАБОТЧИКИ КНОПОК ДОБАВЛЕНИЯ
-// ============================================================
-document.getElementById('add-player-btn')?.addEventListener('click', () => openCharacterForm('Игрок', false));
-document.getElementById('add-ally-btn')?.addEventListener('click', () => openCharacterForm('Союзник', true));
-document.getElementById('add-enemy-btn')?.addEventListener('click', () => openCharacterForm('Враг', true));
 
-// NPC (шаблон) — оставляем старый быстрый способ
-document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
-    const template = prompt('Выберите шаблон NPC (cultist, beastman, albino, flamingPredator, gregor):', 'beastman');
-    if (!template || !NPC_TEMPLATES[template]) {
-        alert('Неверный шаблон. Доступны: cultist, beastman, albino, flamingPredator, gregor');
-        return;
-    }
-    const npc = { ...NPC_TEMPLATES[template] };
-    const name = prompt('Имя NPC (оставьте пустым для шаблонного):', npc.name);
-    if (name && name.trim()) npc.name = name.trim();
-
+// ============================================================
+// 7. ИНИЦИАТИВА
+// ============================================================
+document.getElementById('roll-init-btn')?.addEventListener('click', async () => {
+    console.log('🎲 Инициатива нажата');
     try {
-        const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        const charData = {
-            ...npc,
-            id: charId,
-            wounds: npc.maxWounds || npc.wounds || 10,
-            maxWounds: npc.maxWounds || npc.wounds || 10,
-            conditions: [],
-            isActive: true,
-            playerName: 'GM',
-            joinedAt: serverTimestamp()
-        };
+        const chars = state.battleData?.characters || {};
+        const turnOrder = [];
+        for (const [id, char] of Object.entries(chars)) {
+            if (!char.isActive) continue;
+            const agBonus = Math.floor((char.ag || 25) / 10);
+            const roll = Math.floor(Math.random() * 10) + 1;
+            turnOrder.push({ id, initiative: roll + agBonus, name: char.name || 'Безымянный' });
+        }
+        turnOrder.sort((a, b) => b.initiative - a.initiative);
+
         await updateDoc(battleRef, {
-            [`characters.${charId}`]: charData,
-            turnOrder: arrayUnion({ id: charId, initiative: 0, name: charData.name || 'Безымянный' })
+            turnOrder: turnOrder,
+            currentTurnIndex: 0,
+            currentPlayerId: turnOrder.length > 0 ? turnOrder[0].id : null,
+            turn: (state.battleData?.turn || 0) + 1
         });
-        addLogEntry(`👹 Призван ${npc.name}`, 'system');
+
+        addLogEntry(`🎲 Инициатива: ${turnOrder.map((t, i) => `${i + 1}. ${t.name} (${t.initiative})`).join(' → ')}`, 'system');
     } catch (err) {
         console.error(err);
-        alert('Ошибка добавления NPC: ' + err.message);
+        addLogEntry(`❌ Ошибка инициативы: ${err.message}`, 'system');
     }
 });
-// ============================================================
-// 5.5. АТАКА (НОВАЯ ВЕРСИЯ)
-// ============================================================
-document.getElementById('attack-btn')?.addEventListener('click', async () => {
-    console.log('💥 Атака нажата');
-    const attackerId = document.getElementById('attacker-select')?.value;
-    const defenderId = document.getElementById('defender-select')?.value;
-    const weaponName = document.getElementById('weapon-name-input')?.value || 'Кулак';
-    const threshold = parseInt(document.getElementById('attack-threshold-input')?.value) || 45;
-    const damageDice = document.getElementById('damage-dice-input')?.value || '1d10';
-    const modifier = parseInt(document.getElementById('modifier-input')?.value) || 0;
-    const isFull = document.getElementById('full-attack-check')?.checked || false;
-    const isAllOut = document.getElementById('all-out-check')?.checked || false;
 
-    if (!attackerId || !defenderId) {
-        alert('Выберите атакующего и цель');
-        return;
-    }
-    if (attackerId === defenderId) {
-        alert('Нельзя атаковать самого себя');
-        return;
-    }
-
+// ============================================================
+// 8. СЛЕДУЮЩИЙ ХОД
+// ============================================================
+document.getElementById('next-turn-btn')?.addEventListener('click', async () => {
+    console.log('⏩ Следующий ход нажат');
     try {
         const data = state.battleData;
         if (!data) return;
-        const attacker = data.characters[attackerId];
-        const defender = data.characters[defenderId];
-        if (!attacker || !defender) throw new Error('Персонаж не найден');
-        if (!attacker.isActive || !defender.isActive) throw new Error('Персонаж не активен');
+        const turnOrder = data.turnOrder || [];
+        if (turnOrder.length === 0) return;
 
-        // Бросок атаки
-        const target = threshold + modifier + (isFull ? 10 : 0) + (isAllOut ? 30 : 0);
-        const roll = Math.floor(Math.random() * 100) + 1;
-        const isSuccess = roll <= target;
-        const degrees = isSuccess ? Math.floor((target - roll) / 10) + 1 : Math.floor((roll - target) / 10) + 1;
-        const hitLocation = ['head', 'rightArm', 'leftArm', 'body', 'rightLeg', 'leftLeg'][Math.floor(Math.random() * 6)];
+        let nextIndex = (data.currentTurnIndex || 0) + 1;
+        let attempts = 0;
+        const maxAttempts = turnOrder.length * 2;
 
-        // Парсим кубы урона (поддерживает 1d10, 2d6+4, 3d8-2)
-        let finalDamage = 0;
-        let damageRolls = [];
-        if (isSuccess) {
-            try {
-                const match = damageDice.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
-                if (match) {
-                    const count = parseInt(match[1]) || 1;
-                    const sides = parseInt(match[2]);
-                    const mod = parseInt(match[3] || '0');
-                    let total = 0;
-                    for (let i = 0; i < count; i++) {
-                        const r = Math.floor(Math.random() * sides) + 1;
-                        damageRolls.push(r);
-                        total += r;
-                    }
-                    finalDamage = total + mod + Math.floor((degrees - 1) / 2); // + бонус от успехов
-                    if (finalDamage < 0) finalDamage = 0;
-                } else {
-                    // Если не распарсили — пробуем как простое число
-                    finalDamage = parseInt(damageDice) || 0;
-                }
-            } catch (e) {
-                finalDamage = 0;
-            }
+        while (attempts < maxAttempts) {
+            if (nextIndex >= turnOrder.length) nextIndex = 0;
+            const nextId = turnOrder[nextIndex]?.id;
+            if (nextId && data.characters[nextId]?.isActive !== false) break;
+            nextIndex++;
+            attempts++;
         }
 
-        // Применяем урон
-        if (isSuccess && finalDamage > 0) {
-            const newWounds = defender.wounds - finalDamage;
-            const isDead = newWounds <= -defender.maxWounds;
-            await updateDoc(battleRef, {
-                [`characters.${defenderId}.wounds`]: newWounds,
-                [`characters.${defenderId}.status`]: isDead ? 'dead' : (newWounds <= 0 ? 'critical' : 'alive'),
-                [`characters.${defenderId}.isActive`]: !isDead
-            });
-            if (isDead) {
-                const kills = (data.kills || 0) + 1;
-                await updateDoc(battleRef, { kills: kills });
-                if (killCounter) killCounter.textContent = kills;
-            }
+        if (attempts >= maxAttempts) {
+            await updateDoc(battleRef, { isFinished: true, isActive: false });
+            addLogEntry('⚔️ БОЙ ЗАВЕРШЁН (все мертвы)', 'system');
+            return;
         }
 
-        // Лог с деталями
-        const successText = isSuccess ? '✅ ПОПАДАНИЕ' : '❌ ПРОМАХ';
-        const damageText = isSuccess && finalDamage > 0
-            ? `Урон: ${finalDamage} [${damageRolls.join(', ')}]`
-            : (isSuccess ? 'Урон: 0 (поглощён)' : '');
-        const logText = `${attacker.name} → ${defender.name}: ${successText} (${roll}/${target}) ${damageText}`;
-        addLogEntry(logText, isSuccess ? 'damage' : 'system');
-
-        // Отображаем результат
-        if (attackResult) {
-            attackResult.style.display = 'block';
-            attackResult.innerHTML = `
-                <div><strong>${attacker.name}</strong> → <strong>${defender.name}</strong></div>
-                <div>Оружие: <strong>${weaponName}</strong></div>
-                <div>Бросок: ${roll} (Цель: ${target}) ${isSuccess ? '✅' : '❌'}</div>
-                <div>Успехов: ${isSuccess ? '+' : ''}${degrees}</div>
-                <div>Место попадания: ${hitLocation}</div>
-                <div>Кубы урона: ${damageDice} → ${isSuccess ? finalDamage : 'промах'}</div>
-                ${damageRolls.length > 0 ? `<div>Броски: [${damageRolls.join(', ')}]</div>` : ''}
-                ${isSuccess && finalDamage > 0 ? `<div style="color:#cc4444; font-weight:bold;">💥 Урон: ${finalDamage}</div>` : ''}
-                ${isSuccess && finalDamage === 0 ? '<div style="color:#887777;">Урон поглощён броней</div>' : ''}
-            `;
-        }
+        await updateDoc(battleRef, {
+            currentTurnIndex: nextIndex,
+            currentPlayerId: turnOrder[nextIndex].id,
+            turn: (data.turn || 0) + 1
+        });
     } catch (err) {
         console.error(err);
-        alert('Ошибка атаки: ' + err.message);
+        addLogEntry(`❌ Ошибка перехода хода: ${err.message}`, 'system');
     }
 });
 
-// 5.6. Кубы
-const diceRoll = (sides) => {
-    const result = Math.floor(Math.random() * sides) + 1;
-    addLogEntry(`🎲 d${sides}: <span class="dice-roll">${result}</span>`, 'system');
-};
-
-document.getElementById('dice-d100')?.addEventListener('click', () => diceRoll(100));
-document.getElementById('dice-d10')?.addEventListener('click', () => diceRoll(10));
-document.getElementById('dice-d5')?.addEventListener('click', () => diceRoll(5));
-document.getElementById('dice-custom')?.addEventListener('click', () => {
-    const sides = parseInt(document.getElementById('dice-custom-input')?.value) || 20;
-    diceRoll(sides);
-});
-
-// 5.7. Заметки
-document.getElementById('save-notes-btn')?.addEventListener('click', () => {
-    const notes = document.getElementById('gm-notes')?.value || '';
-    localStorage.setItem(`battle_${state.battleId}_notes`, notes);
-    addLogEntry('📝 Заметки сохранены', 'system');
-});
-
-// Восстановить заметки при загрузке
-const savedNotes = localStorage.getItem(`battle_${state.battleId}_notes`);
-if (savedNotes && document.getElementById('gm-notes')) {
-    document.getElementById('gm-notes').value = savedNotes;
-}
 // ============================================================
-// 6. АТАКА (РАБОЧАЯ ВЕРСИЯ)
+// 9. АТАКА
 // ============================================================
 document.getElementById('attack-btn')?.addEventListener('click', async () => {
+    console.log('💥 Атака нажата');
     const attackerId = document.getElementById('attacker-select')?.value;
     const defenderId = document.getElementById('defender-select')?.value;
     const weaponName = document.getElementById('weapon-name-input')?.value || 'Кулак';
@@ -430,14 +329,12 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
         if (!attacker || !defender) throw new Error('Персонаж не найден');
         if (!attacker.isActive || !defender.isActive) throw new Error('Персонаж не активен');
 
-        // Бросок атаки
         const target = threshold + modifier + (isFull ? 10 : 0) + (isAllOut ? 30 : 0);
         const roll = Math.floor(Math.random() * 100) + 1;
         const isSuccess = roll <= target;
         const degrees = isSuccess ? Math.floor((target - roll) / 10) + 1 : Math.floor((roll - target) / 10) + 1;
         const hitLocation = ['Голова', 'Правая рука', 'Левая рука', 'Торс', 'Правая нога', 'Левая нога'][Math.floor(Math.random() * 6)];
 
-        // Парсим кубы урона
         let finalDamage = 0;
         let damageRolls = [];
         if (isSuccess) {
@@ -462,13 +359,11 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
                 finalDamage = 0;
             }
 
-            // Применяем урон (с броней)
             const armor = defender.armor || { head: 0, body: 0, arms: 0, legs: 0 };
             const armorValue = armor[hitLocation.toLowerCase()] || 0;
             finalDamage = Math.max(0, finalDamage - armorValue);
         }
 
-        // Обновляем раны
         if (isSuccess && finalDamage > 0) {
             const newWounds = defender.wounds - finalDamage;
             const isDead = newWounds <= -defender.maxWounds;
@@ -484,15 +379,12 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
             }
         }
 
-        // Лог
         const successText = isSuccess ? '✅ ПОПАДАНИЕ' : '❌ ПРОМАХ';
         const damageText = isSuccess && finalDamage > 0
             ? `💥 Урон: ${finalDamage} [${damageRolls.join(', ')}]`
             : (isSuccess ? '🛡️ Урон поглощён броней' : '');
-        const logText = `${attacker.name} → ${defender.name}: ${successText} (${roll}/${target}) ${damageText}`;
-        addLogEntry(logText, isSuccess ? 'damage' : 'system');
+        addLogEntry(`${attacker.name} → ${defender.name}: ${successText} (${roll}/${target}) ${damageText}`, isSuccess ? 'damage' : 'system');
 
-        // Результат
         if (attackResult) {
             attackResult.style.display = 'block';
             attackResult.innerHTML = `
@@ -513,8 +405,9 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
         alert('Ошибка атаки: ' + err.message);
     }
 });
+
 // ============================================================
-// 7. КУБЫ (НОВАЯ ВЕРСИЯ)
+// 10. КУБЫ
 // ============================================================
 document.querySelectorAll('.dice-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -530,7 +423,6 @@ document.getElementById('dice-custom-btn')?.addEventListener('click', () => {
     if (!expr) return;
 
     try {
-        // Парсим выражение вида "3d6" или "2d10+5"
         const match = expr.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
         if (!match) {
             addLogEntry(`❌ Неверный формат кубов: ${expr}`, 'system');
@@ -564,81 +456,21 @@ document.getElementById('dice-custom-btn')?.addEventListener('click', () => {
 });
 
 // ============================================================
-// 8. КНОПКИ ДОБАВЛЕНИЯ (ИГРОК, СОЮЗНИК, ВРАГ)
+// 11. ЗАМЕТКИ
 // ============================================================
-function addCharacterWithRole(role, isNPC = true) {
-    const name = prompt(`Имя ${role}:`, role === 'Игрок' ? 'Воин Хаоса' : `${role}`);
-    if (!name) return;
-    const playerName = isNPC ? 'GM' : (prompt('Имя игрока:', 'Игрок') || 'Игрок');
-
-    const char = {
-        name: name,
-        ws: 30, bs: 30, s: 30, t: 30, ag: 30, int: 30, per: 30, wp: 30, fel: 30,
-        wounds: 12, maxWounds: 12,
-        armor: { head: 0, body: 2, arms: 0, legs: 0 },
-        weapon: 'Кулак',
-        traits: [],
-        status: 'alive',
-        isNPC: isNPC,
-        role: role
-    };
-
-    // Союзники и враги — NPC
-    if (role === 'Союзник') char.ally = true;
-    if (role === 'Враг') char.enemy = true;
-
-    return addCharacterToBattle(char, playerName);
-}
-
-document.getElementById('add-ally-btn')?.addEventListener('click', () => addCharacterWithRole('Союзник', true));
-document.getElementById('add-enemy-btn')?.addEventListener('click', () => addCharacterWithRole('Враг', true));
-// ============================================================
-// 9. ИНИЦИАТИВА (НОВАЯ ВЕРСИЯ)
-// ============================================================
-const initQueue = [];
-
-document.getElementById('init-add-btn')?.addEventListener('click', () => {
-    const name = document.getElementById('init-name-input')?.value.trim();
-    const bonus = parseInt(document.getElementById('init-bonus-input')?.value) || 0;
-    if (!name) return alert('Введите имя');
-    const roll = Math.floor(Math.random() * 10) + 1;
-    const total = roll + bonus;
-    initQueue.push({ name, bonus, roll, total });
-    initQueue.sort((a, b) => b.total - a.total);
-    renderInitQueue();
-    document.getElementById('init-name-input').value = '';
+document.getElementById('save-notes-btn')?.addEventListener('click', () => {
+    const notes = document.getElementById('gm-notes')?.value || '';
+    localStorage.setItem(`battle_${state.battleId}_notes`, notes);
+    addLogEntry('📝 Заметки сохранены', 'system');
 });
 
-function renderInitQueue() {
-    const container = document.getElementById('init-queue');
-    if (!container) return;
-    if (initQueue.length === 0) {
-        container.innerHTML = '<span style="color:#554444; font-size:13px;">Очередь пуста</span>';
-        return;
-    }
-    container.innerHTML = initQueue.map((item, index) =>
-        `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-bottom:1px solid rgba(255,255,255,0.05);">
-            <span><strong>${item.name}</strong> (бонус ${item.bonus}) → бросок ${item.roll} = <span class="dice-roll">${item.total}</span></span>
-            <button class="tab-btn" style="padding:2px 8px; font-size:11px; background:#3a1a1a;" data-index="${index}">✕</button>
-        </div>`
-    ).join('');
-    // Удаление
-    container.querySelectorAll('button[data-index]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const idx = parseInt(btn.dataset.index);
-            initQueue.splice(idx, 1);
-            renderInitQueue();
-        });
-    });
+const savedNotes = localStorage.getItem(`battle_${state.battleId}_notes`);
+if (savedNotes && document.getElementById('gm-notes')) {
+    document.getElementById('gm-notes').value = savedNotes;
 }
 
-document.getElementById('init-roll-all-btn')?.addEventListener('click', () => {
-    if (initQueue.length === 0) return alert('Очередь пуста');
-    const result = initQueue.map(item => `${item.name} (${item.total})`).join(' → ');
-    addLogEntry(`🎲 Инициатива: ${result}`, 'system');
-});
 // ============================================================
-// 10. ЭКСПОРТ/ИМПОРТ ЛОГА
+// 12. ЭКСПОРТ/ИМПОРТ ЛОГА
 // ============================================================
 document.getElementById('export-log-btn')?.addEventListener('click', () => {
     if (!state.battleData?.log) return alert('Нет лога для экспорта');
@@ -663,9 +495,8 @@ document.getElementById('import-log-file')?.addEventListener('change', async (e)
         const text = await file.text();
         const log = JSON.parse(text);
         if (!Array.isArray(log)) throw new Error('Не массив');
-        // Добавляем каждую запись в лог
         for (const entry of log) {
-            await addLogEntry(entry.text || JSON.stringify(entry), entry.isSystem ? 'system' : '');
+            addLogEntry(entry.text || JSON.stringify(entry), entry.isSystem ? 'system' : '');
         }
         alert(`Импортировано ${log.length} записей`);
     } catch (err) {
@@ -673,8 +504,9 @@ document.getElementById('import-log-file')?.addEventListener('change', async (e)
     }
     e.target.value = '';
 });
+
 // ============================================================
-// 6. ОЧИСТКА ПРИ УХОДЕ
+// 13. ОЧИСТКА ПРИ УХОДЕ
 // ============================================================
 window.addEventListener('beforeunload', () => {
     if (state.unsubscribe) state.unsubscribe();
