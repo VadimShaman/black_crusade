@@ -48,6 +48,7 @@ const attackResult = $('attack-result');
 // 3. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 function addLogEntry(text, type = 'system') {
+    if (!logContainer) return;
     const entry = document.createElement('div');
     entry.className = `log-entry ${type}`;
     const time = new Date().toLocaleTimeString();
@@ -57,6 +58,7 @@ function addLogEntry(text, type = 'system') {
 }
 
 function updateCombatants(data) {
+    if (!combatantsList) return;
     const chars = data.characters || {};
     const turnOrder = data.turnOrder || [];
     const entries = Object.entries(chars);
@@ -111,16 +113,16 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
 
     const data = snapshot.data();
     state.battleData = data;
-    battleTitle.textContent = `⚔️ ${data.name || 'Сражение'}`;
-    battleIdDisplay.textContent = `ID: ${state.battleId}`;
-    turnDisplay.textContent = data.turn || 0;
-    currentTurnDisplay.textContent = data.turnOrder?.[data.currentTurnIndex]?.name || '—';
-    killCounter.textContent = data.kills || 0;
+    if (battleTitle) battleTitle.textContent = `⚔️ ${data.name || 'Сражение'}`;
+    if (battleIdDisplay) battleIdDisplay.textContent = `ID: ${state.battleId}`;
+    if (turnDisplay) turnDisplay.textContent = data.turn || 0;
+    if (currentTurnDisplay) currentTurnDisplay.textContent = data.turnOrder?.[data.currentTurnIndex]?.name || '—';
+    if (killCounter) killCounter.textContent = data.kills || 0;
 
     updateCombatants(data);
 
     // Лог
-    if (data.log && data.log.length > 0) {
+    if (data.log && data.log.length > 0 && logContainer) {
         logContainer.innerHTML = '';
         data.log.forEach(entry => {
             const time = entry.time || new Date().toLocaleTimeString();
@@ -134,15 +136,16 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
     }
 }, (error) => {
     console.error('Ошибка подписки:', error);
-    logContainer.innerHTML = '<div style="color:#cc4444;">❌ Ошибка подключения к Firebase</div>';
+    if (logContainer) logContainer.innerHTML = '<div style="color:#cc4444;">❌ Ошибка подключения к Firebase</div>';
 });
 
 // ============================================================
-// 5. ОБРАБОТЧИКИ СОБЫТИЙ
+// 5. ОБРАБОТЧИКИ СОБЫТИЙ (АКТИВАЦИЯ КНОПОК)
 // ============================================================
 
 // 5.1. Инициатива
-$('roll-init-btn')?.addEventListener('click', async () => {
+document.getElementById('roll-init-btn')?.addEventListener('click', async () => {
+    console.log('🎲 Инициатива нажата');
     try {
         const chars = state.battleData?.characters || {};
         const turnOrder = [];
@@ -169,7 +172,8 @@ $('roll-init-btn')?.addEventListener('click', async () => {
 });
 
 // 5.2. Следующий ход
-$('next-turn-btn')?.addEventListener('click', async () => {
+document.getElementById('next-turn-btn')?.addEventListener('click', async () => {
+    console.log('⏩ Следующий ход нажат');
     try {
         const data = state.battleData;
         if (!data) return;
@@ -206,7 +210,8 @@ $('next-turn-btn')?.addEventListener('click', async () => {
 });
 
 // 5.3. Добавить NPC
-$('add-npc-btn')?.addEventListener('click', async () => {
+document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
+    console.log('👹 Добавить NPC нажата');
     const template = prompt('Выберите шаблон NPC (cultist, beastman, albino, flamingPredator, gregor):', 'beastman');
     if (!template || !NPC_TEMPLATES[template]) {
         alert('Неверный шаблон. Доступны: cultist, beastman, albino, flamingPredator, gregor');
@@ -240,7 +245,8 @@ $('add-npc-btn')?.addEventListener('click', async () => {
 });
 
 // 5.4. Добавить игрока
-$('add-player-btn')?.addEventListener('click', async () => {
+document.getElementById('add-player-btn')?.addEventListener('click', async () => {
+    console.log('👤 Добавить игрока нажата');
     const name = prompt('Имя персонажа:', 'Воин Хаоса');
     if (!name) return;
     const playerName = prompt('Имя игрока:', 'Игрок') || 'Игрок';
@@ -279,13 +285,14 @@ $('add-player-btn')?.addEventListener('click', async () => {
 });
 
 // 5.5. Атака
-$('attack-btn')?.addEventListener('click', async () => {
-    const attackerId = $('attacker-select')?.value;
-    const defenderId = $('defender-select')?.value;
-    const weapon = $('weapon-select')?.value || 'Кулак';
-    const modifier = parseInt($('modifier-input')?.value) || 0;
-    const isFull = $('full-attack-check')?.checked || false;
-    const isAllOut = $('all-out-check')?.checked || false;
+document.getElementById('attack-btn')?.addEventListener('click', async () => {
+    console.log('💥 Атака нажата');
+    const attackerId = document.getElementById('attacker-select')?.value;
+    const defenderId = document.getElementById('defender-select')?.value;
+    const weapon = document.getElementById('weapon-select')?.value || 'Кулак';
+    const modifier = parseInt(document.getElementById('modifier-input')?.value) || 0;
+    const isFull = document.getElementById('full-attack-check')?.checked || false;
+    const isAllOut = document.getElementById('all-out-check')?.checked || false;
 
     if (!attackerId || !defenderId) {
         alert('Выберите атакующего и цель');
@@ -335,7 +342,7 @@ $('attack-btn')?.addEventListener('click', async () => {
             if (isDead) {
                 const kills = (data.kills || 0) + 1;
                 await updateDoc(battleRef, { kills: kills });
-                killCounter.textContent = kills;
+                if (killCounter) killCounter.textContent = kills;
             }
         }
 
@@ -346,15 +353,17 @@ $('attack-btn')?.addEventListener('click', async () => {
         addLogEntry(logText, isSuccess ? (finalDamage > 0 ? 'damage' : 'system') : 'system');
 
         // Отображаем результат
-        attackResult.style.display = 'block';
-        attackResult.innerHTML = `
-            <div><strong>${attacker.name}</strong> → <strong>${defender.name}</strong></div>
-            <div>Бросок: ${roll} (Цель: ${target}) ${isSuccess ? '✅' : '❌'}</div>
-            <div>Успехов: ${isSuccess ? '+' : ''}${degrees}</div>
-            <div>Место: ${hitLocation}</div>
-            <div>Урон: ${finalDamage} (база ${baseDamage}, броня ${armorValue}, пенетрация ${pen})</div>
-            ${isCritical ? '<div style="color:#ff8800; font-weight:bold;">🔥 КРИТИЧЕСКОЕ ПОПАДАНИЕ!</div>' : ''}
-        `;
+        if (attackResult) {
+            attackResult.style.display = 'block';
+            attackResult.innerHTML = `
+                <div><strong>${attacker.name}</strong> → <strong>${defender.name}</strong></div>
+                <div>Бросок: ${roll} (Цель: ${target}) ${isSuccess ? '✅' : '❌'}</div>
+                <div>Успехов: ${isSuccess ? '+' : ''}${degrees}</div>
+                <div>Место: ${hitLocation}</div>
+                <div>Урон: ${finalDamage} (база ${baseDamage}, броня ${armorValue}, пенетрация ${pen})</div>
+                ${isCritical ? '<div style="color:#ff8800; font-weight:bold;">🔥 КРИТИЧЕСКОЕ ПОПАДАНИЕ!</div>' : ''}
+            `;
+        }
     } catch (err) {
         console.error(err);
         alert('Ошибка атаки: ' + err.message);
@@ -367,25 +376,25 @@ const diceRoll = (sides) => {
     addLogEntry(`🎲 d${sides}: <span class="dice-roll">${result}</span>`, 'system');
 };
 
-$('dice-d100')?.addEventListener('click', () => diceRoll(100));
-$('dice-d10')?.addEventListener('click', () => diceRoll(10));
-$('dice-d5')?.addEventListener('click', () => diceRoll(5));
-$('dice-custom')?.addEventListener('click', () => {
-    const sides = parseInt($('dice-custom-input')?.value) || 20;
+document.getElementById('dice-d100')?.addEventListener('click', () => diceRoll(100));
+document.getElementById('dice-d10')?.addEventListener('click', () => diceRoll(10));
+document.getElementById('dice-d5')?.addEventListener('click', () => diceRoll(5));
+document.getElementById('dice-custom')?.addEventListener('click', () => {
+    const sides = parseInt(document.getElementById('dice-custom-input')?.value) || 20;
     diceRoll(sides);
 });
 
 // 5.7. Заметки
-$('save-notes-btn')?.addEventListener('click', () => {
-    const notes = $('gm-notes')?.value || '';
+document.getElementById('save-notes-btn')?.addEventListener('click', () => {
+    const notes = document.getElementById('gm-notes')?.value || '';
     localStorage.setItem(`battle_${state.battleId}_notes`, notes);
     addLogEntry('📝 Заметки сохранены', 'system');
 });
 
 // Восстановить заметки при загрузке
 const savedNotes = localStorage.getItem(`battle_${state.battleId}_notes`);
-if (savedNotes && $('gm-notes')) {
-    $('gm-notes').value = savedNotes;
+if (savedNotes && document.getElementById('gm-notes')) {
+    document.getElementById('gm-notes').value = savedNotes;
 }
 
 // ============================================================
@@ -393,105 +402,6 @@ if (savedNotes && $('gm-notes')) {
 // ============================================================
 window.addEventListener('beforeunload', () => {
     if (state.unsubscribe) state.unsubscribe();
-    // ============================================================
-    // 7. АКТИВАЦИЯ КНОПОК
-    // ============================================================
-    document.addEventListener('DOMContentLoaded', () => {
-        // Проверяем, что элементы существуют
-        const rollInitBtn = document.getElementById('roll-init-btn');
-        const nextTurnBtn = document.getElementById('next-turn-btn');
-        const addNpcBtn = document.getElementById('add-npc-btn');
-        const addPlayerBtn = document.getElementById('add-player-btn');
-        const attackBtn = document.getElementById('attack-btn');
-        const diceD100 = document.getElementById('dice-d100');
-        const diceD10 = document.getElementById('dice-d10');
-        const diceD5 = document.getElementById('dice-d5');
-        const diceCustom = document.getElementById('dice-custom');
-        const saveNotesBtn = document.getElementById('save-notes-btn');
-
-        // Временные заглушки — чтобы кнопки реагировали
-        if (rollInitBtn) {
-            rollInitBtn.addEventListener('click', () => {
-                console.log('🎲 Инициатива нажата');
-                alert('Инициатива будет работать после полной настройки');
-            });
-        }
-
-        if (nextTurnBtn) {
-            nextTurnBtn.addEventListener('click', () => {
-                console.log('⏩ Следующий ход нажат');
-                alert('Переход хода будет работать после полной настройки');
-            });
-        }
-
-        if (addNpcBtn) {
-            addNpcBtn.addEventListener('click', () => {
-                console.log('👹 Добавить NPC нажата');
-                const name = prompt('Введите имя NPC:', 'Культист');
-                if (name) {
-                    alert(`NPC ${name} добавлен (временная заглушка)`);
-                }
-            });
-        }
-
-        if (addPlayerBtn) {
-            addPlayerBtn.addEventListener('click', () => {
-                console.log('👤 Добавить игрока нажата');
-                const name = prompt('Введите имя игрока:', 'Воин Хаоса');
-                if (name) {
-                    alert(`Игрок ${name} добавлен (временная заглушка)`);
-                }
-            });
-        }
-
-        if (attackBtn) {
-            attackBtn.addEventListener('click', () => {
-                console.log('💥 Атака нажата');
-                const attacker = document.getElementById('attacker-select')?.value || 'Атакующий';
-                const defender = document.getElementById('defender-select')?.value || 'Цель';
-                alert(`⚔️ ${attacker} атакует ${defender} (временная заглушка)`);
-            });
-        }
-
-        if (diceD100) {
-            diceD100.addEventListener('click', () => {
-                const result = Math.floor(Math.random() * 100) + 1;
-                alert(`🎲 d100: ${result}`);
-            });
-        }
-
-        if (diceD10) {
-            diceD10.addEventListener('click', () => {
-                const result = Math.floor(Math.random() * 10) + 1;
-                alert(`🎲 d10: ${result}`);
-            });
-        }
-
-        if (diceD5) {
-            diceD5.addEventListener('click', () => {
-                const result = Math.floor(Math.random() * 5) + 1;
-                alert(`🎲 d5: ${result}`);
-            });
-        }
-
-        if (diceCustom) {
-            diceCustom.addEventListener('click', () => {
-                const sides = parseInt(document.getElementById('dice-custom-input')?.value) || 20;
-                const result = Math.floor(Math.random() * sides) + 1;
-                alert(`🎲 d${sides}: ${result}`);
-            });
-        }
-
-        if (saveNotesBtn) {
-            saveNotesBtn.addEventListener('click', () => {
-                const notes = document.getElementById('gm-notes')?.value || '';
-                localStorage.setItem(`battle_${state.battleId}_notes`, notes);
-                alert('📝 Заметки сохранены!');
-            });
-        }
-
-        console.log('✅ Все кнопки активированы (временные заглушки)');
-    });
 });
 
 console.log('🔥 Боевая комната загружена! ID:', state.battleId);
