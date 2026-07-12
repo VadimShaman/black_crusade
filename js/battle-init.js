@@ -284,12 +284,16 @@ document.getElementById('add-player-btn')?.addEventListener('click', async () =>
     }
 });
 
-// 5.5. Атака
+// ============================================================
+// 5.5. АТАКА (НОВАЯ ВЕРСИЯ)
+// ============================================================
 document.getElementById('attack-btn')?.addEventListener('click', async () => {
     console.log('💥 Атака нажата');
     const attackerId = document.getElementById('attacker-select')?.value;
     const defenderId = document.getElementById('defender-select')?.value;
-    const weapon = document.getElementById('weapon-select')?.value || 'Кулак';
+    const weaponName = document.getElementById('weapon-name-input')?.value || 'Кулак';
+    const threshold = parseInt(document.getElementById('attack-threshold-input')?.value) || 45;
+    const damageDice = document.getElementById('damage-dice-input')?.value || '1d10';
     const modifier = parseInt(document.getElementById('modifier-input')?.value) || 0;
     const isFull = document.getElementById('full-attack-check')?.checked || false;
     const isAllOut = document.getElementById('all-out-check')?.checked || false;
@@ -312,23 +316,38 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
         if (!attacker.isActive || !defender.isActive) throw new Error('Персонаж не активен');
 
         // Бросок атаки
-        const baseStat = attacker.ws || 25;
-        const target = baseStat + modifier + (isFull ? 10 : 0) + (isAllOut ? 30 : 0);
+        const target = threshold + modifier + (isFull ? 10 : 0) + (isAllOut ? 30 : 0);
         const roll = Math.floor(Math.random() * 100) + 1;
         const isSuccess = roll <= target;
         const degrees = isSuccess ? Math.floor((target - roll) / 10) + 1 : Math.floor((roll - target) / 10) + 1;
         const hitLocation = ['head', 'rightArm', 'leftArm', 'body', 'rightLeg', 'leftLeg'][Math.floor(Math.random() * 6)];
 
-        // Урон
-        const weaponDmg = { 'Кулак': 3, 'Когти': 6, 'Мясницкий тесак': 8, 'Ритуальный нож': 4, 'Огненные когти': 14, 'Автопистолет': 5 }[weapon] || 4;
-        const strBonus = Math.floor((attacker.s || 25) / 10) * 2;
-        let baseDamage = weaponDmg + strBonus;
-        if (isSuccess) baseDamage += Math.floor((degrees - 1) / 2);
-        const armor = defender.armor || { head: 0, body: 0, arms: 0, legs: 0 };
-        const armorValue = armor[hitLocation] || 0;
-        const pen = { 'Кулак': 0, 'Когти': 2, 'Мясницкий тесак': 2, 'Ритуальный нож': 1, 'Огненные когти': 4, 'Автопистолет': 2 }[weapon] || 1;
-        const finalDamage = Math.max(0, baseDamage - Math.max(0, armorValue - pen));
-        const isCritical = finalDamage > 0 && Math.floor(Math.random() * 10) + 1 === 10;
+        // Парсим кубы урона (поддерживает 1d10, 2d6+4, 3d8-2)
+        let finalDamage = 0;
+        let damageRolls = [];
+        if (isSuccess) {
+            try {
+                const match = damageDice.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
+                if (match) {
+                    const count = parseInt(match[1]) || 1;
+                    const sides = parseInt(match[2]);
+                    const mod = parseInt(match[3] || '0');
+                    let total = 0;
+                    for (let i = 0; i < count; i++) {
+                        const r = Math.floor(Math.random() * sides) + 1;
+                        damageRolls.push(r);
+                        total += r;
+                    }
+                    finalDamage = total + mod + Math.floor((degrees - 1) / 2); // + бонус от успехов
+                    if (finalDamage < 0) finalDamage = 0;
+                } else {
+                    // Если не распарсили — пробуем как простое число
+                    finalDamage = parseInt(damageDice) || 0;
+                }
+            } catch (e) {
+                finalDamage = 0;
+            }
+        }
 
         // Применяем урон
         if (isSuccess && finalDamage > 0) {
@@ -346,22 +365,27 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
             }
         }
 
-        // Лог
-        const logText = isSuccess
-            ? `${attacker.name} → ${defender.name}: ${isSuccess ? 'ПОПАДАНИЕ' : 'ПРОМАХ'} (${roll}/${target}) ${finalDamage > 0 ? `Урон: ${finalDamage}` : ''} ${isCritical ? '🔥 КРИТ!' : ''}`
-            : `${attacker.name} промахивается по ${defender.name} (${roll}/${target})`;
-        addLogEntry(logText, isSuccess ? (finalDamage > 0 ? 'damage' : 'system') : 'system');
+        // Лог с деталями
+        const successText = isSuccess ? '✅ ПОПАДАНИЕ' : '❌ ПРОМАХ';
+        const damageText = isSuccess && finalDamage > 0
+            ? `Урон: ${finalDamage} [${damageRolls.join(', ')}]`
+            : (isSuccess ? 'Урон: 0 (поглощён)' : '');
+        const logText = `${attacker.name} → ${defender.name}: ${successText} (${roll}/${target}) ${damageText}`;
+        addLogEntry(logText, isSuccess ? 'damage' : 'system');
 
         // Отображаем результат
         if (attackResult) {
             attackResult.style.display = 'block';
             attackResult.innerHTML = `
                 <div><strong>${attacker.name}</strong> → <strong>${defender.name}</strong></div>
+                <div>Оружие: <strong>${weaponName}</strong></div>
                 <div>Бросок: ${roll} (Цель: ${target}) ${isSuccess ? '✅' : '❌'}</div>
                 <div>Успехов: ${isSuccess ? '+' : ''}${degrees}</div>
-                <div>Место: ${hitLocation}</div>
-                <div>Урон: ${finalDamage} (база ${baseDamage}, броня ${armorValue}, пенетрация ${pen})</div>
-                ${isCritical ? '<div style="color:#ff8800; font-weight:bold;">🔥 КРИТИЧЕСКОЕ ПОПАДАНИЕ!</div>' : ''}
+                <div>Место попадания: ${hitLocation}</div>
+                <div>Кубы урона: ${damageDice} → ${isSuccess ? finalDamage : 'промах'}</div>
+                ${damageRolls.length > 0 ? `<div>Броски: [${damageRolls.join(', ')}]</div>` : ''}
+                ${isSuccess && finalDamage > 0 ? `<div style="color:#cc4444; font-weight:bold;">💥 Урон: ${finalDamage}</div>` : ''}
+                ${isSuccess && finalDamage === 0 ? '<div style="color:#887777;">Урон поглощён броней</div>' : ''}
             `;
         }
     } catch (err) {
@@ -396,7 +420,166 @@ const savedNotes = localStorage.getItem(`battle_${state.battleId}_notes`);
 if (savedNotes && document.getElementById('gm-notes')) {
     document.getElementById('gm-notes').value = savedNotes;
 }
+// ============================================================
+// 7. КУБЫ (НОВАЯ ВЕРСИЯ)
+// ============================================================
+document.querySelectorAll('.dice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const sides = parseInt(btn.dataset.sides);
+        const result = Math.floor(Math.random() * sides) + 1;
+        addLogEntry(`🎲 d${sides}: <span class="dice-roll">${result}</span>`, 'system');
+    });
+});
 
+document.getElementById('dice-custom-btn')?.addEventListener('click', () => {
+    const input = document.getElementById('dice-custom-input');
+    const expr = input.value.trim();
+    if (!expr) return;
+
+    try {
+        // Парсим выражение вида "3d6" или "2d10+5"
+        const match = expr.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
+        if (!match) {
+            addLogEntry(`❌ Неверный формат кубов: ${expr}`, 'system');
+            return;
+        }
+        const count = parseInt(match[1]) || 1;
+        const sides = parseInt(match[2]);
+        const mod = parseInt(match[3] || '0');
+
+        if (count > 100 || sides > 1000) {
+            addLogEntry(`❌ Слишком много кубов или граней: ${expr}`, 'system');
+            return;
+        }
+
+        let results = [];
+        let total = 0;
+        for (let i = 0; i < count; i++) {
+            const r = Math.floor(Math.random() * sides) + 1;
+            results.push(r);
+            total += r;
+        }
+        total += mod;
+        const modStr = mod > 0 ? `+${mod}` : (mod < 0 ? `${mod}` : '');
+        addLogEntry(
+            `🎲 ${expr} → [${results.join(', ')}]${modStr} = <span class="dice-roll">${total}</span>`,
+            'system'
+        );
+    } catch (e) {
+        addLogEntry(`❌ Ошибка броска: ${e.message}`, 'system');
+    }
+});
+
+// ============================================================
+// 8. КНОПКИ ДОБАВЛЕНИЯ (ИГРОК, СОЮЗНИК, ВРАГ)
+// ============================================================
+function addCharacterWithRole(role, isNPC = true) {
+    const name = prompt(`Имя ${role}:`, role === 'Игрок' ? 'Воин Хаоса' : `${role}`);
+    if (!name) return;
+    const playerName = isNPC ? 'GM' : (prompt('Имя игрока:', 'Игрок') || 'Игрок');
+
+    const char = {
+        name: name,
+        ws: 30, bs: 30, s: 30, t: 30, ag: 30, int: 30, per: 30, wp: 30, fel: 30,
+        wounds: 12, maxWounds: 12,
+        armor: { head: 0, body: 2, arms: 0, legs: 0 },
+        weapon: 'Кулак',
+        traits: [],
+        status: 'alive',
+        isNPC: isNPC,
+        role: role
+    };
+
+    // Союзники и враги — NPC
+    if (role === 'Союзник') char.ally = true;
+    if (role === 'Враг') char.enemy = true;
+
+    return addCharacterToBattle(char, playerName);
+}
+
+document.getElementById('add-ally-btn')?.addEventListener('click', () => addCharacterWithRole('Союзник', true));
+document.getElementById('add-enemy-btn')?.addEventListener('click', () => addCharacterWithRole('Враг', true));
+// ============================================================
+// 9. ИНИЦИАТИВА (НОВАЯ ВЕРСИЯ)
+// ============================================================
+const initQueue = [];
+
+document.getElementById('init-add-btn')?.addEventListener('click', () => {
+    const name = document.getElementById('init-name-input')?.value.trim();
+    const bonus = parseInt(document.getElementById('init-bonus-input')?.value) || 0;
+    if (!name) return alert('Введите имя');
+    const roll = Math.floor(Math.random() * 10) + 1;
+    const total = roll + bonus;
+    initQueue.push({ name, bonus, roll, total });
+    initQueue.sort((a, b) => b.total - a.total);
+    renderInitQueue();
+    document.getElementById('init-name-input').value = '';
+});
+
+function renderInitQueue() {
+    const container = document.getElementById('init-queue');
+    if (!container) return;
+    if (initQueue.length === 0) {
+        container.innerHTML = '<span style="color:#554444; font-size:13px;">Очередь пуста</span>';
+        return;
+    }
+    container.innerHTML = initQueue.map((item, index) =>
+        `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span><strong>${item.name}</strong> (бонус ${item.bonus}) → бросок ${item.roll} = <span class="dice-roll">${item.total}</span></span>
+            <button class="tab-btn" style="padding:2px 8px; font-size:11px; background:#3a1a1a;" data-index="${index}">✕</button>
+        </div>`
+    ).join('');
+    // Удаление
+    container.querySelectorAll('button[data-index]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index);
+            initQueue.splice(idx, 1);
+            renderInitQueue();
+        });
+    });
+}
+
+document.getElementById('init-roll-all-btn')?.addEventListener('click', () => {
+    if (initQueue.length === 0) return alert('Очередь пуста');
+    const result = initQueue.map(item => `${item.name} (${item.total})`).join(' → ');
+    addLogEntry(`🎲 Инициатива: ${result}`, 'system');
+});
+// ============================================================
+// 10. ЭКСПОРТ/ИМПОРТ ЛОГА
+// ============================================================
+document.getElementById('export-log-btn')?.addEventListener('click', () => {
+    if (!state.battleData?.log) return alert('Нет лога для экспорта');
+    const data = JSON.stringify(state.battleData.log, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `battle_log_${state.battleId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+document.getElementById('import-log-btn')?.addEventListener('click', () => {
+    document.getElementById('import-log-file')?.click();
+});
+
+document.getElementById('import-log-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+        const text = await file.text();
+        const log = JSON.parse(text);
+        if (!Array.isArray(log)) throw new Error('Не массив');
+        // Добавляем каждую запись в лог
+        for (const entry of log) {
+            await addLogEntry(entry.text || JSON.stringify(entry), entry.isSystem ? 'system' : '');
+        }
+        alert(`Импортировано ${log.length} записей`);
+    } catch (err) {
+        alert('Ошибка импорта: ' + err.message);
+    }
+    e.target.value = '';
+});
 // ============================================================
 // 6. ОЧИСТКА ПРИ УХОДЕ
 // ============================================================

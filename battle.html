@@ -153,93 +153,152 @@
 
         <div class="battle-grid">
             <!-- Левая колонка: Участники + Заметки -->
-            <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <h3>👥 Участники</h3>
-                    <div>
-                        <button class="tab-btn" id="add-npc-btn" style="padding:4px 12px;">+ NPC</button>
-                        <button class="tab-btn" id="add-player-btn" style="padding:4px 12px;">+ Игрок</button>
-                    </div>
-                </div>
-                <div id="combatants-list" style="max-height:400px; overflow-y:auto;">
-                    <div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>
-                </div>
-
-                <div style="margin-top:20px;">
-                    <h4>📝 Заметки GM</h4>
-                    <textarea id="gm-notes" class="notes-area" placeholder="Заметки по бою..."></textarea>
-                    <button class="tab-btn" id="save-notes-btn" style="margin-top:8px;">💾 Сохранить</button>
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:6px;">
+                <h3 style="margin:0;">👥 Участники</h3>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button class="tab-btn" id="add-player-btn" style="padding:4px 12px;">👤 Игрок</button>
+                    <button class="tab-btn" id="add-ally-btn" style="padding:4px 12px; background:#1a3a1a;">🤝
+                        Союзник</button>
+                    <button class="tab-btn" id="add-enemy-btn" style="padding:4px 12px; background:#3a1a1a;">👹
+                        Враг</button>
+                    <button class="tab-btn" id="add-npc-btn" style="padding:4px 12px;">📋 NPC</button>
                 </div>
             </div>
-
-            <!-- Центр: Лог + Калькулятор -->
-            <div>
-                <div style="margin-bottom:16px;">
-                    <h3>📜 Лог сражения</h3>
-                    <div id="battle-log" class="log-viewport">
-                        <div style="color:#554444; text-align:center; padding:20px;">Ожидание подключения...</div>
-                    </div>
-                </div>
-
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); padding:16px; border-radius:4px;">
-                    <h4>🎯 Калькулятор атаки</h4>
-                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
-                        <select id="attacker-select" style="flex:1; min-width:120px;">
-                            <option value="">Атакующий</option>
-                        </select>
-                        <span style="align-self:center;">➔</span>
-                        <select id="defender-select" style="flex:1; min-width:120px;">
-                            <option value="">Цель</option>
-                        </select>
-                    </div>
-                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
-                        <select id="weapon-select" style="flex:1; min-width:120px;">
-                            <option value="Кулак">Кулак</option>
-                            <option value="Когти">Когти</option>
-                            <option value="Мясницкий тесак">Мясницкий тесак</option>
-                            <option value="Ритуальный нож">Ритуальный нож</option>
-                            <option value="Огненные когти">Огненные когти</option>
-                            <option value="Автопистолет">Автопистолет</option>
-                        </select>
-                        <input type="number" id="modifier-input" value="0" placeholder="Мод" style="width:80px;">
-                        <label style="font-size:13px; color:#887777;"><input type="checkbox" id="full-attack-check">
-                            +10</label>
-                        <label style="font-size:13px; color:#887777;"><input type="checkbox" id="all-out-check">
-                            +30</label>
-                    </div>
-                    <button class="tab-btn" id="attack-btn" style="width:100%; background:#4a0000; padding:10px;">💥
-                        Атаковать!</button>
-                    <div id="attack-result"
-                        style="margin-top:12px; padding:12px; background:#080505; border-radius:4px; display:none;">
-                    </div>
-                </div>
-
-                <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
-                    <button class="btn-roll" id="dice-d100">🎲 d100</button>
-                    <button class="btn-roll" id="dice-d10">🎲 d10</button>
-                    <button class="btn-roll" id="dice-d5">🎲 d5</button>
-                    <button class="btn-roll" id="dice-custom">🎲 dX</button>
-                    <input type="number" id="dice-custom-input" value="20"
-                        style="width:60px; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:4px 8px; border-radius:4px;">
-                </div>
+            <div id="combatants-list" style="max-height:400px; overflow-y:auto;">
+                <div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>
             </div>
 
-            <!-- Правая колонка: Информация -->
-            <div>
-                <h3>📊 Статистика</h3>
-                <div
-                    style="background:var(--bg-card); border:1px solid var(--border-color); padding:16px; border-radius:4px;">
-                    <p><strong>Раунд:</strong> <span id="turn-display">0</span></p>
-                    <p><strong>Текущий ход:</strong> <span id="current-turn-display">—</span></p>
-                    <p><strong>Всего участников:</strong> <span id="total-combatants">0</span></p>
-                    <p><strong>Активных:</strong> <span id="active-combatants">0</span></p>
-                    <p><strong>Счётчик убийств:</strong> <span id="kill-counter">0</span></p>
+            <div style="margin-top:20px;">
+                <h4>📝 Заметки GM</h4>
+                <textarea id="gm-notes" class="notes-area" placeholder="Заметки по бою..."></textarea>
+                <button class="tab-btn" id="save-notes-btn" style="margin-top:8px;">💾 Сохранить</button>
+            </div>
+        </div>
+
+        <!-- Центр: Лог + Калькулятор -->
+        <div>
+            <div style="margin-bottom:16px;">
+                <h3>📜 Лог сражения</h3>
+                <div id="battle-log" class="log-viewport">
+                    <div style="color:#554444; text-align:center; padding:20px;">Ожидание подключения...</div>
                 </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button class="tab-btn" id="export-log-btn" style="padding:4px 12px;">📥 Экспорт лога</button>
+                <button class="tab-btn" id="import-log-btn" style="padding:4px 12px;">📤 Импорт лога</button>
+                <input type="file" id="import-log-file" accept=".json" style="display:none;">
+            </div>
+            <!-- КАЛЬКУЛЯТОР АТАКИ (НОВАЯ ВЕРСИЯ) -->
+            <div
+                style="background:var(--bg-card); border:1px solid var(--border-color); padding:16px; border-radius:4px;">
+                <h4>🎯 Калькулятор атаки</h4>
+
+                <!-- Атакующий -->
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                    <select id="attacker-select" style="flex:1; min-width:120px;">
+                        <option value="">Атакующий</option>
+                    </select>
+                    <span style="align-self:center;">➔</span>
+                    <select id="defender-select" style="flex:1; min-width:120px;">
+                        <option value="">Цель</option>
+                    </select>
+                </div>
+
+                <!-- Название оружия (текст) -->
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:13px; color:#887777; display:block; margin-bottom:4px;">⚔️ Название
+                        оружия</label>
+                    <input type="text" id="weapon-name-input" value="Кулак" placeholder="Например: Мясницкий тесак"
+                        style="width:100%; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:8px; border-radius:4px;">
+                </div>
+
+                <!-- Порог попадания (число) -->
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                    <div style="flex:1; min-width:100px;">
+                        <label style="font-size:13px; color:#887777; display:block; margin-bottom:4px;">🎯 Порог
+                            попадания</label>
+                        <input type="number" id="attack-threshold-input" value="45" placeholder="45"
+                            style="width:100%; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:8px; border-radius:4px;">
+                    </div>
+                    <div style="flex:1; min-width:100px;">
+                        <label style="font-size:13px; color:#887777; display:block; margin-bottom:4px;">🎲 Кубы
+                            урона</label>
+                        <input type="text" id="damage-dice-input" value="1d10+3" placeholder="1d10+3"
+                            style="width:100%; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:8px; border-radius:4px;">
+                    </div>
+                </div>
+
+                <!-- Модификаторы -->
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                    <label style="font-size:13px; color:#887777;"><input type="checkbox" id="full-attack-check"> +10
+                        (Полная атака)</label>
+                    <label style="font-size:13px; color:#887777;"><input type="checkbox" id="all-out-check"> +30
+                        (Безрассудная)</label>
+                    <input type="number" id="modifier-input" value="0" placeholder="Мод"
+                        style="width:80px; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:4px 8px; border-radius:4px;">
+                </div>
+
+                <!-- Кнопка атаки -->
+                <button class="tab-btn" id="attack-btn" style="width:100%; background:#4a0000; padding:10px;">💥
+                    Атаковать!</button>
+
+                <!-- Результат атаки -->
+                <div id="attack-result"
+                    style="margin-top:12px; padding:12px; background:#080505; border-radius:4px; display:none;"></div>
+            </div>
+            <button class="tab-btn" id="attack-btn" style="width:100%; background:#4a0000; padding:10px;">💥
+                Атаковать!</button>
+            <div id="attack-result"
+                style="margin-top:12px; padding:12px; background:#080505; border-radius:4px; display:none;">
+            </div>
+        </div>
+
+        <!-- КУБЫ -->
+        <div
+            style="margin-top:16px; background:var(--bg-card); border:1px solid var(--border-color); padding:12px; border-radius:4px;">
+            <h4 style="margin-top:0; margin-bottom:8px;">🎲 Кубы</h4>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button class="btn-roll dice-btn" data-sides="4">d4</button>
+                <button class="btn-roll dice-btn" data-sides="6">d6</button>
+                <button class="btn-roll dice-btn" data-sides="8">d8</button>
+                <button class="btn-roll dice-btn" data-sides="10">d10</button>
+                <button class="btn-roll dice-btn" data-sides="12">d12</button>
+                <button class="btn-roll dice-btn" data-sides="20">d20</button>
+                <button class="btn-roll dice-btn" data-sides="100">d100</button>
+                <span style="color:#554444; margin:0 4px;">или</span>
+                <input type="text" id="dice-custom-input" value="3d6" placeholder="3d6"
+                    style="width:80px; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:4px 8px; border-radius:4px;">
+                <button class="btn-roll" id="dice-custom-btn">🎲 Бросить</button>
             </div>
         </div>
     </div>
 
+    <!-- Правая колонка: Информация -->
+    <div>
+        <h3>📊 Статистика</h3>
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); padding:16px; border-radius:4px;">
+            <p><strong>Раунд:</strong> <span id="turn-display">0</span></p>
+            <p><strong>Текущий ход:</strong> <span id="current-turn-display">—</span></p>
+            <p><strong>Всего участников:</strong> <span id="total-combatants">0</span></p>
+            <p><strong>Активных:</strong> <span id="active-combatants">0</span></p>
+            <p><strong>Счётчик убийств:</strong> <span id="kill-counter">0</span></p>
+        </div>
+    </div>
+    </div>
+    </div>
+    <!-- Инициатива -->
+    <div
+        style="background:var(--bg-card); border:1px solid var(--border-color); padding:12px; border-radius:4px; margin-bottom:12px;">
+        <h4 style="margin:0 0 8px 0;">⚡ Инициатива</h4>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="init-name-input" placeholder="Имя" style="flex:1; min-width:100px;">
+            <input type="number" id="init-bonus-input" value="0" placeholder="Бонус" style="width:60px;">
+            <button class="tab-btn" id="init-add-btn" style="padding:4px 12px;">➕ Добавить</button>
+            <button class="tab-btn" id="init-roll-all-btn" style="padding:4px 12px;">🎲 Бросить всем</button>
+        </div>
+        <div id="init-queue" style="margin-top:8px; max-height:150px; overflow-y:auto;"></div>
+    </div>
     <!-- Firebase и модули -->
     <script type="importmap">
 {

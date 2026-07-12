@@ -260,3 +260,103 @@ select:focus {
 .gap-12 {
     gap: 12px;
 }
+
+/* ============================================================ */
+/* АДАПТАЦИЯ ПОД ТЕЛЕФОН */
+/* ============================================================ */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .battle-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+
+    .battle-header {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    .battle-header h1 {
+        font-size: 20px !important;
+        text-align: center;
+    }
+
+    .battle-header div {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .tab-btn {
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+    }
+
+    .combatant-card {
+        font-size: 13px;
+        padding: 8px;
+        flex-wrap: wrap;
+    }
+
+    .log-viewport {
+        height: 200px !important;
+        font-size: 12px !important;
+    }
+
+    .notes-area {
+        height: 100px !important;
+    }
+
+    .btn-roll {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+    }
+
+    #dice-custom-input {
+        width: 50px !important;
+    }
+
+    /* Сворачиваем лишние колонки */
+    .battle-grid>div:last-child {
+        order: -1;
+    }
+
+    /* Сделаем кнопки удобнее для пальцев */
+    button,
+    .tab-btn,
+    .btn-roll {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    input,
+    select {
+        font-size: 16px !important;
+        /* чтобы не было зума на iOS */
+        padding: 8px;
+    }
+
+    /* Гайд: текст не выпирает */
+    .tab-content {
+        padding: 12px !important;
+    }
+
+    details summary {
+        font-size: 1.1em !important;
+    }
+
+    table {
+        font-size: 12px !important;
+    }
+
+    th,
+    td {
+        padding: 4px 6px !important;
+    }
+}
