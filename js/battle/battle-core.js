@@ -226,7 +226,7 @@ import { calculateAttack, performAttack } from './battle-attack.js';
 // ============================================================
 // 8. ЛОГ (импорт из battle-log)
 // ============================================================
-import { addLog, subscribeToLog } from './battle-log.js';
+// import { addLog, subscribeToLog } from './battle-log.js';
 // ============================================================
 // 9. СТАТУСЫ (импорт из battle-status)
 // ============================================================
