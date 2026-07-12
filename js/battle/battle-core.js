@@ -223,19 +223,14 @@ export async function nextTurn(battleId) {
 // 7. КАЛЬКУЛЯТОР АТАКИ (импорт из battle-attack)
 // ============================================================
 import { calculateAttack, performAttack } from './battle-attack.js';
-export { calculateAttack, performAttack };
-
 // ============================================================
 // 8. ЛОГ (импорт из battle-log)
 // ============================================================
 import { addLog, subscribeToLog } from './battle-log.js';
-export { addLog, subscribeToLog };
-
 // ============================================================
 // 9. СТАТУСЫ (импорт из battle-status)
 // ============================================================
 import { applyDamage, addCondition, removeCondition } from './battle-status.js';
-export { applyDamage, addCondition, removeCondition };
 
 // ============================================================
 // 10. ЗАВЕРШЕНИЕ БОЯ
