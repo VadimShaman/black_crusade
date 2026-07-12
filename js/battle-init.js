@@ -1,4 +1,10 @@
 // js/battle-init.js
+// ============================================================
+// БОЕВАЯ КОМНАТА — ПОЛНАЯ ЛОГИКА
+// Подключение к Firebase, управление участниками, инициатива,
+// атака, кубы, заметки, экспорт/импорт лога.
+// ============================================================
+
 import { db } from './firebase-config.js';
 import {
     doc, onSnapshot, collection, addDoc, updateDoc,
@@ -15,7 +21,7 @@ const state = {
     unsubscribe: null
 };
 
-// Получаем ID из URL
+// Получаем ID боя из URL
 const params = new URLSearchParams(window.location.search);
 state.battleId = params.get('id');
 
@@ -47,6 +53,10 @@ const attackResult = $('attack-result');
 // ============================================================
 // 3. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
+
+/**
+ * Добавляет запись в лог боя (локально, без Firebase)
+ */
 function addLogEntry(text, type = 'system') {
     if (!logContainer) return;
     const entry = document.createElement('div');
@@ -57,6 +67,9 @@ function addLogEntry(text, type = 'system') {
     logContainer.scrollTop = logContainer.scrollHeight;
 }
 
+/**
+ * Обновляет список участников, селекты для атаки и кнопки редактирования
+ */
 function updateCombatants(data) {
     if (!combatantsList) return;
     const chars = data.characters || {};
@@ -65,6 +78,26 @@ function updateCombatants(data) {
 
     totalCombatants.textContent = entries.length;
     activeCombatants.textContent = entries.filter(([_, c]) => c.isActive !== false).length;
+
+    // ===== ОБНОВЛЯЕМ СЕЛЕКТЫ ДЛЯ АТАКИ =====
+    const attackerSelect = document.getElementById('attacker-select');
+    const defenderSelect = document.getElementById('defender-select');
+    if (attackerSelect) {
+        attackerSelect.innerHTML = '<option value="">Атакующий</option>';
+        entries.forEach(([id, char]) => {
+            if (char.isActive !== false && char.status !== 'dead') {
+                attackerSelect.innerHTML += `<option value="${id}">${char.name} (${char.role || 'NPC'})</option>`;
+            }
+        });
+    }
+    if (defenderSelect) {
+        defenderSelect.innerHTML = '<option value="">Цель</option>';
+        entries.forEach(([id, char]) => {
+            if (char.isActive !== false && char.status !== 'dead') {
+                defenderSelect.innerHTML += `<option value="${id}">${char.name} (${char.role || 'NPC'})</option>`;
+            }
+        });
+    }
 
     if (entries.length === 0) {
         combatantsList.innerHTML = '<div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>';
@@ -90,15 +123,27 @@ function updateCombatants(data) {
                         ${isDead ? '💀' : `${char.wounds}/${char.maxWounds}`}
                     </span>
                     <span class="status-badge ${char.status || 'alive'}">${char.status || 'alive'}</span>
+                    <button class="tab-btn edit-char-btn" data-id="${id}" style="padding:2px 8px; font-size:11px; background:#1a2a3a;">✏️</button>
                 </div>
             </div>
         `;
     }
     combatantsList.innerHTML = html;
+
+    // ===== ОБРАБОТЧИКИ ДЛЯ РЕДАКТИРОВАНИЯ =====
+    document.querySelectorAll('.edit-char-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const charId = btn.dataset.id;
+            const char = data.characters[charId];
+            if (!char) return;
+            openEditForm(charId, char);
+        });
+    });
 }
 
 // ============================================================
-// 4. ПОДПИСКА НА БОЙ
+// 4. ПОДПИСКА НА БОЙ (FIREBASE REALTIME)
 // ============================================================
 const battleRef = doc(db, 'battles', state.battleId);
 state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
@@ -122,7 +167,7 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
 
     updateCombatants(data);
 
-    // Лог
+    // Отображаем лог из Firebase
     if (data.log && data.log.length > 0 && logContainer) {
         logContainer.innerHTML = '';
         data.log.forEach(entry => {
@@ -141,8 +186,12 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
 });
 
 // ============================================================
-// 5. ДОБАВЛЕНИЕ ПЕРСОНАЖА (УПРОЩЁННОЕ)
+// 5. ДОБАВЛЕНИЕ ПЕРСОНАЖА
 // ============================================================
+
+/**
+ * Добавляет персонажа в Firebase
+ */
 async function addCharacterToBattle(charData) {
     try {
         const charId = `char_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
@@ -163,6 +212,9 @@ async function addCharacterToBattle(charData) {
     }
 }
 
+/**
+ * Упрощённое добавление персонажа через prompt
+ */
 function addSimpleCharacter(role, isNPC = true) {
     const name = prompt(`Имя ${role}:`, role === 'Игрок' ? 'Воин Хаоса' : `${role}`);
     if (!name) return;
@@ -185,9 +237,14 @@ function addSimpleCharacter(role, isNPC = true) {
 
     addCharacterToBattle(charData);
 }
+
 // ============================================================
 // 5.5. РЕДАКТИРОВАНИЕ ПЕРСОНАЖА
 // ============================================================
+
+/**
+ * Открывает модальное окно для редактирования статов персонажа
+ */
 function openEditForm(charId, charData) {
     const modal = document.createElement('div');
     modal.id = 'edit-char-modal';
@@ -319,14 +376,15 @@ function openEditForm(charId, charData) {
         if (e.target === modal) modal.remove();
     });
 }
+
 // ============================================================
-// 6. ОБРАБОТЧИКИ ДОБАВЛЕНИЯ
+// 6. ОБРАБОТЧИКИ ДОБАВЛЕНИЯ ПЕРСОНАЖЕЙ
 // ============================================================
 document.getElementById('add-player-btn')?.addEventListener('click', () => addSimpleCharacter('Игрок', false));
 document.getElementById('add-ally-btn')?.addEventListener('click', () => addSimpleCharacter('Союзник', true));
 document.getElementById('add-enemy-btn')?.addEventListener('click', () => addSimpleCharacter('Враг', true));
 
-// NPC (шаблон)
+// Добавление NPC по шаблону
 document.getElementById('add-npc-btn')?.addEventListener('click', async () => {
     const template = prompt('Выберите шаблон NPC (cultist, beastman, albino, flamingPredator, gregor):', 'beastman');
     if (!template || !NPC_TEMPLATES[template]) {
@@ -538,81 +596,12 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
         alert('Ошибка атаки: ' + err.message);
     }
 });
-function updateCombatants(data) {
-    if (!combatantsList) return;
-    const chars = data.characters || {};
-    const turnOrder = data.turnOrder || [];
-    const entries = Object.entries(chars);
 
-    totalCombatants.textContent = entries.length;
-    activeCombatants.textContent = entries.filter(([_, c]) => c.isActive !== false).length;
-
-    // ===== ОБНОВЛЯЕМ СЕЛЕКТЫ ДЛЯ АТАКИ =====
-    const attackerSelect = document.getElementById('attacker-select');
-    const defenderSelect = document.getElementById('defender-select');
-    if (attackerSelect) {
-        attackerSelect.innerHTML = '<option value="">Атакующий</option>';
-        entries.forEach(([id, char]) => {
-            if (char.isActive !== false && char.status !== 'dead') {
-                attackerSelect.innerHTML += `<option value="${id}">${char.name} (${char.role || 'NPC'})</option>`;
-            }
-        });
-    }
-    if (defenderSelect) {
-        defenderSelect.innerHTML = '<option value="">Цель</option>';
-        entries.forEach(([id, char]) => {
-            if (char.isActive !== false && char.status !== 'dead') {
-                defenderSelect.innerHTML += `<option value="${id}">${char.name} (${char.role || 'NPC'})</option>`;
-            }
-        });
-    }
-    // ===== КОНЕЦ ОБНОВЛЕНИЯ СЕЛЕКТОВ =====
-
-    if (entries.length === 0) {
-        combatantsList.innerHTML = '<div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>';
-        return;
-    }
-
-    let html = '';
-    for (const [id, char] of entries) {
-        const isActive = char.isActive !== false;
-        const isDead = char.status === 'dead';
-        const isCurrent = turnOrder[data.currentTurnIndex]?.id === id;
-        const hpPercent = char.maxWounds ? Math.round((char.wounds / char.maxWounds) * 100) : 100;
-
-        html += `
-            <div class="combatant-card ${isCurrent ? 'active-turn' : ''} ${isDead ? 'dead' : ''}" data-id="${id}">
-                <div>
-                    <strong>${char.name || 'Безымянный'}</strong>
-                    ${char.playerName ? `<span style="color:#887777; font-size:12px;">(${char.playerName})</span>` : ''}
-                    <span style="color:#887777; font-size:11px; margin-left:6px;">[${char.role || 'NPC'}]</span>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:13px; ${hpPercent < 25 ? 'color:#cc4444;' : ''}">
-                        ${isDead ? '💀' : `${char.wounds}/${char.maxWounds}`}
-                    </span>
-                    <span class="status-badge ${char.status || 'alive'}">${char.status || 'alive'}</span>
-                    <button class="tab-btn edit-char-btn" data-id="${id}" style="padding:2px 8px; font-size:11px; background:#1a2a3a;">✏️</button>
-                </div>
-            </div>
-        `;
-    }
-    combatantsList.innerHTML = html;
-
-    // ===== ОБРАБОТЧИКИ ДЛЯ РЕДАКТИРОВАНИЯ =====
-    document.querySelectorAll('.edit-char-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const charId = btn.dataset.id;
-            const char = data.characters[charId];
-            if (!char) return;
-            openEditForm(charId, char);
-        });
-    });
-}
 // ============================================================
 // 10. КУБЫ
 // ============================================================
+
+// Обычные кнопки кубов (d4, d6, d8, d10, d12, d20, d100)
 document.querySelectorAll('.dice-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const sides = parseInt(btn.dataset.sides);
@@ -621,6 +610,7 @@ document.querySelectorAll('.dice-btn').forEach(btn => {
     });
 });
 
+// Пользовательский ввод (3d6, 2d10+5 и т.д.)
 document.getElementById('dice-custom-btn')?.addEventListener('click', () => {
     const input = document.getElementById('dice-custom-input');
     const expr = input.value.trim();
@@ -660,7 +650,7 @@ document.getElementById('dice-custom-btn')?.addEventListener('click', () => {
 });
 
 // ============================================================
-// 11. ЗАМЕТКИ
+// 11. ЗАМЕТКИ GM (LOCALSTORAGE)
 // ============================================================
 document.getElementById('save-notes-btn')?.addEventListener('click', () => {
     const notes = document.getElementById('gm-notes')?.value || '';
@@ -668,14 +658,17 @@ document.getElementById('save-notes-btn')?.addEventListener('click', () => {
     addLogEntry('📝 Заметки сохранены', 'system');
 });
 
+// Восстанавливаем заметки при загрузке
 const savedNotes = localStorage.getItem(`battle_${state.battleId}_notes`);
 if (savedNotes && document.getElementById('gm-notes')) {
     document.getElementById('gm-notes').value = savedNotes;
 }
 
 // ============================================================
-// 12. ЭКСПОРТ/ИМПОРТ ЛОГА
+// 12. ЭКСПОРТ / ИМПОРТ ЛОГА
 // ============================================================
+
+// Экспорт лога в JSON
 document.getElementById('export-log-btn')?.addEventListener('click', async () => {
     try {
         const battleSnap = await getDoc(battleRef);
@@ -699,6 +692,7 @@ document.getElementById('export-log-btn')?.addEventListener('click', async () =>
     }
 });
 
+// Импорт лога из JSON
 document.getElementById('import-log-btn')?.addEventListener('click', () => {
     document.getElementById('import-log-file')?.click();
 });
