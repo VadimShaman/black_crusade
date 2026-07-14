@@ -218,7 +218,14 @@ async function addCharacterToBattle(charData) {
                 id: charId,
                 conditions: [],
                 isActive: true,
-                joinedAt: serverTimestamp()
+                joinedAt: serverTimestamp(),
+                // ===== РЕСУРСЫ =====
+                od: 2,
+                maxOd: 2,
+                reactions: 1,
+                maxReactions: 1,
+                hpLog: [],
+                isDefending: false
             },
             turnOrder: arrayUnion({ id: charId, initiative: 0, name: charData.name || 'Безымянный' })
         });
@@ -256,6 +263,8 @@ function addSimpleCharacter(role, isNPC = true) {
 }
 
 // ============================================================
+// 5.8. ЗАЩИТА (УКЛОНЕНИЕ / ПАРИРОВАНИЕ)
+// ============================================================// ============================================================
 // 5.5. РЕДАКТИРОВАНИЕ ПЕРСОНАЖА
 // ============================================================
 
@@ -337,6 +346,22 @@ function openEditForm(charId, charData) {
                 </div>
             </div>
             
+            <!-- ===== РЕСУРСЫ ===== -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">⚡ ОД (макс)</label>
+                    <input type="number" id="edit-od" value="${charData.maxOd || 2}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">🔄 Реакции (макс)</label>
+                    <input type="number" id="edit-reactions" value="${charData.maxReactions || 1}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+            </div>
+            
             <div style="display: flex; gap: 10px; margin-top: 16px;">
                 <button id="edit-submit-btn" style="flex: 1; padding: 10px; background: var(--primary-red); border: none;
                         color: #fff; border-radius: 4px; cursor: pointer; font-weight: bold;">
@@ -366,7 +391,10 @@ function openEditForm(charId, charData) {
             armor: {
                 ...charData.armor,
                 body: parseInt(modal.querySelector('#edit-armor').value) || 0
-            }
+            },
+            // ===== РЕСУРСЫ =====
+            maxOd: parseInt(modal.querySelector('#edit-od').value) || 2,
+            maxReactions: parseInt(modal.querySelector('#edit-reactions').value) || 1
         };
 
         try {
@@ -379,7 +407,9 @@ function openEditForm(charId, charData) {
                 [`characters.${charId}.ag`]: updatedData.ag,
                 [`characters.${charId}.wp`]: updatedData.wp,
                 [`characters.${charId}.maxWounds`]: updatedData.maxWounds,
-                [`characters.${charId}.armor.body`]: updatedData.armor.body
+                [`characters.${charId}.armor.body`]: updatedData.armor.body,
+                [`characters.${charId}.maxOd`]: updatedData.maxOd,
+                [`characters.${charId}.maxReactions`]: updatedData.maxReactions
             });
             addLogEntry(`✏️ ${updatedData.name} обновлён`, 'system');
             modal.remove();
@@ -393,10 +423,7 @@ function openEditForm(charId, charData) {
         if (e.target === modal) modal.remove();
     });
 }
-// ============================================================
-// 5.8. ЗАЩИТА (УКЛОНЕНИЕ / ПАРИРОВАНИЕ)
-// ============================================================
-async function attemptDefense(battleId, defenderId, attackerId, isRanged = false) {
+sRanged = false) {
     const battleRef = doc(db, 'battles', battleId);
     const battleSnap = await getDoc(battleRef);
     if (!battleSnap.exists()) return null;
@@ -932,7 +959,7 @@ document.getElementById('prev-turn-btn')?.addEventListener('click', async () => 
     }
 });
 // ============================================================
-// 9. АТАКА
+// 9. АТАКА (С РЕАКЦИЕЙ ПОСЛЕ БРОСКА, ДО УРОНА)
 // ============================================================
 document.getElementById('attack-btn')?.addEventListener('click', async () => {
     console.log('💥 Атака нажата');
@@ -962,14 +989,18 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
         if (!attacker || !defender) throw new Error('Персонаж не найден');
         if (!attacker.isActive || !defender.isActive) throw new Error('Персонаж не активен');
 
+        // ===== ШАГ 1: БРОСОК АТАКИ =====
         const target = threshold + modifier + (isFull ? 10 : 0) + (isAllOut ? 30 : 0);
         const roll = Math.floor(Math.random() * 100) + 1;
         const isSuccess = roll <= target;
         const degrees = isSuccess ? Math.floor((target - roll) / 10) + 1 : Math.floor((roll - target) / 10) + 1;
         const hitLocation = ['Голова', 'Правая рука', 'Левая рука', 'Торс', 'Правая нога', 'Левая нога'][Math.floor(Math.random() * 6)];
 
+        // ===== ШАГ 2: РАСЧЁТ УРОНА (ЕСЛИ АТАКА УСПЕШНА) =====
         let finalDamage = 0;
         let damageRolls = [];
+        let attackResultText = '';
+
         if (isSuccess) {
             try {
                 const match = damageDice.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
@@ -992,34 +1023,54 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
                 finalDamage = 0;
             }
 
+            // Броня (до применения урона)
             const armor = defender.armor || { head: 0, body: 0, arms: 0, legs: 0 };
             const armorValue = armor[hitLocation.toLowerCase()] || 0;
             finalDamage = Math.max(0, finalDamage - armorValue);
         }
 
+        // ===== ШАГ 3: РЕАКЦИЯ ЦЕЛИ (ПОСЛЕ БРОСКА, ДО УРОНА) =====
+        let defenseResult = null;
         if (isSuccess && finalDamage > 0) {
-            const newWounds = defender.wounds - finalDamage;
-            const isDead = newWounds <= -defender.maxWounds;
-            await updateDoc(battleRef, {
-                [`characters.${defenderId}.wounds`]: newWounds,
-                [`characters.${defenderId}.status`]: isDead ? 'dead' : (newWounds <= 0 ? 'critical' : 'alive'),
-                [`characters.${defenderId}.isActive`]: !isDead
-            });
-            if (isDead) {
-                const kills = (data.kills || 0) + 1;
-                await updateDoc(battleRef, { kills: kills });
-                if (killCounter) killCounter.textContent = kills;
+            // Проверяем, есть ли у цели Реакции
+            if (defender.reactions > 0 && !defender.isDefending) {
+                const isRanged = false; // пока только рукопашная
+                defenseResult = await attemptDefense(state.battleId, defenderId, attackerId, isRanged);
+
+                if (defenseResult?.success) {
+                    // Защита успешна — урон отменяется
+                    addLogEntry(`${defender.name} защитился! Урон отменён.`, 'system');
+                    finalDamage = 0; // обнуляем урон
+                    attackResultText = `🛡️ ${defender.name} защитился! Урон отменён.`;
+                } else if (defenseResult && !defenseResult.success) {
+                    addLogEntry(`${defender.name} не смог защититься. Урон наносится.`, 'system');
+                }
             }
         }
 
-        const successText = isSuccess ? '✅ ПОПАДАНИЕ' : '❌ ПРОМАХ';
-        const damageText = isSuccess && finalDamage > 0
-            ? `💥 Урон: ${finalDamage} [${damageRolls.join(', ')}]`
-            : (isSuccess ? '🛡️ Урон поглощён броней' : '');
-        addLogEntry(`${attacker.name} → ${defender.name}: ${successText} (${roll}/${target}) ${damageText}`, isSuccess ? 'damage' : 'system');
+        // ===== ШАГ 4: ПРИМЕНЕНИЕ УРОНА (ЕСЛИ НЕ БЫЛО ЗАЩИТЫ) =====
+        if (isSuccess && finalDamage > 0) {
+            await applyDamage(state.battleId, defenderId, finalDamage, {
+                attacker: attacker.name,
+                defender: defender.name,
+                isSuccess: true,
+                roll: roll,
+                target: target
+            });
+        } else if (isSuccess && finalDamage <= 0 && !defenseResult?.success) {
+            addLogEntry(`${attacker.name} атакует ${defender.name} — Урон поглощён броней!`, 'system');
+        } else if (!isSuccess) {
+            addLogEntry(`${attacker.name} промахивается по ${defender.name} (${roll}/${target})`, 'system');
+        }
 
+        // ===== ШАГ 5: ВЫВОД РЕЗУЛЬТАТА =====
         if (attackResult) {
             attackResult.style.display = 'block';
+            const successText = isSuccess ? '✅ ПОПАДАНИЕ' : '❌ ПРОМАХ';
+            const damageText = isSuccess && finalDamage > 0
+                ? `💥 Урон: ${finalDamage} [${damageRolls.join(', ')}]`
+                : (isSuccess ? '🛡️ Урон поглощён броней' : '');
+
             attackResult.innerHTML = `
                 <div><strong>${attacker.name}</strong> → <strong>${defender.name}</strong></div>
                 <div>⚔️ ${weaponName}</div>
@@ -1028,8 +1079,9 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
                 <div>🎯 Место: ${hitLocation}</div>
                 <div>🎲 Кубы: ${damageDice} → ${isSuccess ? finalDamage : 'промах'}</div>
                 ${damageRolls.length > 0 ? `<div>🎲 Броски: [${damageRolls.join(', ')}]</div>` : ''}
+                ${defenseResult?.success ? `<div style="color:#ff8800;">🛡️ ${defender.name} защитился!</div>` : ''}
                 ${isSuccess && finalDamage > 0 ? `<div style="color:#cc4444; font-weight:bold;">💥 Урон: ${finalDamage}</div>` : ''}
-                ${isSuccess && finalDamage === 0 ? '<div style="color:#887777;">🛡️ Урон поглощён броней</div>' : ''}
+                ${isSuccess && finalDamage === 0 && !defenseResult?.success ? '<div style="color:#887777;">🛡️ Урон поглощён броней</div>' : ''}
                 ${!isSuccess ? '<div style="color:#887777;">❌ Промах</div>' : ''}
             `;
         }
