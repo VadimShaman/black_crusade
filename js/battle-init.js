@@ -261,10 +261,7 @@ function addSimpleCharacter(role, isNPC = true) {
 
     addCharacterToBattle(charData);
 }
-
 // ============================================================
-// 5.8. ЗАЩИТА (УКЛОНЕНИЕ / ПАРИРОВАНИЕ)
-// ============================================================// ============================================================
 // 5.5. РЕДАКТИРОВАНИЕ ПЕРСОНАЖА
 // ============================================================
 
@@ -423,7 +420,10 @@ function openEditForm(charId, charData) {
         if (e.target === modal) modal.remove();
     });
 }
-sRanged = false) {
+// ============================================================
+// 5.8. ЗАЩИТА (УКЛОНЕНИЕ / ПАРИРОВАНИЕ)
+// ============================================================
+async function attemptDefense(battleId, defenderId, attackerId, isRanged = false) {
     const battleRef = doc(db, 'battles', battleId);
     const battleSnap = await getDoc(battleRef);
     if (!battleSnap.exists()) return null;
