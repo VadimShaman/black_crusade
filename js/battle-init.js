@@ -1169,3 +1169,13 @@ window.addEventListener('beforeunload', () => {
 });
 
 console.log('🔥 Боевая комната загружена! ID:', state.battleId);
+
+// ============================================================
+// ЭКСПОРТ ФУНКЦИЙ ЗАЩИТЫ
+// ============================================================
+export {
+    attemptDefense,
+    applyDamageWithDefense,
+    resetResources,
+    spendOd
+};
