@@ -328,16 +328,47 @@ function openEditForm(charId, charData) {
                 </div>
             </div>
             
+            <!-- ===== РАНЫ ===== -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
                 <div>
-                    <label style="color: #887777; display: block; font-size: 13px;">❤️ Раны (max)</label>
-                    <input type="number" id="edit-wounds" value="${charData.maxWounds || 12}"
+                    <label style="color: #887777; display: block; font-size: 13px;">❤️ Текущие раны</label>
+                    <input type="number" id="edit-current-wounds" value="${charData.wounds || 12}"
                            style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
                                   color: var(--text-light); border-radius: 4px;">
                 </div>
                 <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">❤️ Максимальные раны</label>
+                    <input type="number" id="edit-max-wounds" value="${charData.maxWounds || 12}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+            </div>
+
+            <!-- ===== БРОНЯ ===== -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
                     <label style="color: #887777; display: block; font-size: 13px;">🛡️ Броня (тело)</label>
                     <input type="number" id="edit-armor" value="${charData.armor?.body || 0}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">🛡️ Броня (голова)</label>
+                    <input type="number" id="edit-armor-head" value="${charData.armor?.head || 0}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">🛡️ Броня (руки)</label>
+                    <input type="number" id="edit-armor-arms" value="${charData.armor?.arms || 0}"
+                           style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
+                                  color: var(--text-light); border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="color: #887777; display: block; font-size: 13px;">🛡️ Броня (ноги)</label>
+                    <input type="number" id="edit-armor-legs" value="${charData.armor?.legs || 0}"
                            style="width: 100%; padding: 6px; background: #0a0808; border: 1px solid var(--border-color);
                                   color: var(--text-light); border-radius: 4px;">
                 </div>
@@ -384,12 +415,14 @@ function openEditForm(charId, charData) {
             t: parseInt(modal.querySelector('#edit-t').value) || 30,
             ag: parseInt(modal.querySelector('#edit-ag').value) || 30,
             wp: parseInt(modal.querySelector('#edit-wp').value) || 30,
-            maxWounds: parseInt(modal.querySelector('#edit-wounds').value) || 12,
+            wounds: parseInt(modal.querySelector('#edit-current-wounds').value) || 12,
+            maxWounds: parseInt(modal.querySelector('#edit-max-wounds').value) || 12,
             armor: {
-                ...charData.armor,
-                body: parseInt(modal.querySelector('#edit-armor').value) || 0
+                head: parseInt(modal.querySelector('#edit-armor-head').value) || 0,
+                body: parseInt(modal.querySelector('#edit-armor').value) || 0,
+                arms: parseInt(modal.querySelector('#edit-armor-arms').value) || 0,
+                legs: parseInt(modal.querySelector('#edit-armor-legs').value) || 0
             },
-            // ===== РЕСУРСЫ =====
             maxOd: parseInt(modal.querySelector('#edit-od').value) || 2,
             maxReactions: parseInt(modal.querySelector('#edit-reactions').value) || 1
         };
@@ -403,8 +436,9 @@ function openEditForm(charId, charData) {
                 [`characters.${charId}.t`]: updatedData.t,
                 [`characters.${charId}.ag`]: updatedData.ag,
                 [`characters.${charId}.wp`]: updatedData.wp,
+                [`characters.${charId}.wounds`]: updatedData.wounds,
                 [`characters.${charId}.maxWounds`]: updatedData.maxWounds,
-                [`characters.${charId}.armor.body`]: updatedData.armor.body,
+                [`characters.${charId}.armor`]: updatedData.armor,
                 [`characters.${charId}.maxOd`]: updatedData.maxOd,
                 [`characters.${charId}.maxReactions`]: updatedData.maxReactions
             });
