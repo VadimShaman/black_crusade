@@ -5,13 +5,14 @@
 // атака, кубы, заметки, экспорт/импорт лога.
 // ============================================================
 
+// js/battle-init.js
 import { db } from './firebase-config.js';
 import {
     doc, onSnapshot, collection, addDoc, updateDoc,
     deleteDoc, getDoc, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { NPC_TEMPLATES } from './battle/battle-core.js';
-
+import { applyDamage } from './battle/battle-status.js';   // ← ДОБАВИТЬ ЭТУ СТРОКУ
 // ============================================================
 // 1. СОСТОЯНИЕ
 // ============================================================
