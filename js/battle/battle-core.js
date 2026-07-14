@@ -279,3 +279,10 @@ export function subscribeToActiveBattles(callback) {
         callback(battles);
     });
 }
+// В конце файла battle-core.js
+export {
+    attemptDefense,
+    applyDamageWithDefense,
+    resetResources,
+    spendOd
+};

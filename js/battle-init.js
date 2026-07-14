@@ -79,10 +79,9 @@ function updateCombatants(data) {
     totalCombatants.textContent = entries.length;
     activeCombatants.textContent = entries.filter(([_, c]) => c.isActive !== false).length;
 
-    // ===== ОБНОВЛЯЕМ СЕЛЕКТЫ ДЛЯ АТАКИ =====
+    // ===== ОБНОВЛЯЕМ СЕЛЕКТЫ =====
     const attackerSelect = document.getElementById('attacker-select');
     const defenderSelect = document.getElementById('defender-select');
-
     if (attackerSelect) {
         attackerSelect.innerHTML = '<option value="">Атакующий</option>';
         entries.forEach(([id, char]) => {
@@ -100,7 +99,6 @@ function updateCombatants(data) {
         });
     }
 
-    // ===== ОБНОВЛЯЕМ СЕЛЕКТ ДЛЯ ИНИЦИАТИВЫ =====
     updateInitSelect();
 
     if (entries.length === 0) {
@@ -114,27 +112,42 @@ function updateCombatants(data) {
         const isDead = char.status === 'dead';
         const isCurrent = turnOrder[data.currentTurnIndex]?.id === id;
         const hpPercent = char.maxWounds ? Math.round((char.wounds / char.maxWounds) * 100) : 100;
+        const od = char.od ?? 2;
+        const maxOd = char.maxOd ?? 2;
+        const reactions = char.reactions ?? 1;
+        const maxReactions = char.maxReactions ?? 1;
+        const hpLog = char.hpLog || [];
+
+        // Последние 3 изменения HP
+        const recentHp = hpLog.slice(-3).map(entry =>
+            `${entry.time}: ${entry.delta > 0 ? '+' : ''}${entry.delta} HP`
+        ).join(' | ');
 
         html += `
-            <div class="combatant-card ${isCurrent ? 'active-turn' : ''} ${isDead ? 'dead' : ''}" data-id="${id}">
-                <div>
-                    <strong>${char.name || 'Безымянный'}</strong>
-                    ${char.playerName ? `<span style="color:#887777; font-size:12px;">(${char.playerName})</span>` : ''}
-                    <span style="color:#887777; font-size:11px; margin-left:6px;">[${char.role || 'NPC'}]</span>
+            <div class="combatant-card ${isCurrent ? 'active-turn' : ''} ${isDead ? 'dead' : ''}" data-id="${id}" style="flex-direction:column; align-items:stretch; gap:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                    <div>
+                        <strong>${char.name || 'Безымянный'}</strong>
+                        ${char.playerName ? `<span style="color:#887777; font-size:12px;">(${char.playerName})</span>` : ''}
+                        <span style="color:#887777; font-size:11px; margin-left:6px;">[${char.role || 'NPC'}]</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="font-size:13px; ${hpPercent < 25 ? 'color:#cc4444;' : ''}">
+                            ${isDead ? '💀' : `${char.wounds}/${char.maxWounds}`}
+                        </span>
+                        <span style="font-size:11px; color:#887777;">
+                            ⚡${od}/${maxOd} 🔄${reactions}/${maxReactions}
+                        </span>
+                        <span class="status-badge ${char.status || 'alive'}">${char.status || 'alive'}</span>
+                        <button class="tab-btn edit-char-btn" data-id="${id}" style="padding:2px 8px; font-size:11px; background:#1a2a3a;">✏️</button>
+                    </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:13px; ${hpPercent < 25 ? 'color:#cc4444;' : ''}">
-                        ${isDead ? '💀' : `${char.wounds}/${char.maxWounds}`}
-                    </span>
-                    <span class="status-badge ${char.status || 'alive'}">${char.status || 'alive'}</span>
-                    <button class="tab-btn edit-char-btn" data-id="${id}" style="padding:2px 8px; font-size:11px; background:#1a2a3a;">✏️</button>
-                </div>
+                ${recentHp ? `<div style="font-size:10px; color:#554444; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">${recentHp}</div>` : ''}
             </div>
         `;
     }
     combatantsList.innerHTML = html;
 
-    // ===== ОБРАБОТЧИКИ ДЛЯ РЕДАКТИРОВАНИЯ =====
     document.querySelectorAll('.edit-char-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -380,7 +393,171 @@ function openEditForm(charId, charData) {
         if (e.target === modal) modal.remove();
     });
 }
+// ============================================================
+// 5.8. ЗАЩИТА (УКЛОНЕНИЕ / ПАРИРОВАНИЕ)
+// ============================================================
+async function attemptDefense(battleId, defenderId, attackerId, isRanged = false) {
+    const battleRef = doc(db, 'battles', battleId);
+    const battleSnap = await getDoc(battleRef);
+    if (!battleSnap.exists()) return null;
 
+    const data = battleSnap.data();
+    const defender = data.characters[defenderId];
+    const attacker = data.characters[attackerId];
+
+    if (!defender || defender.isActive === false) return null;
+    if (defender.reactions <= 0) {
+        addLogEntry(`${defender.name} не имеет Реакций для защиты`, 'system');
+        return null;
+    }
+    if (defender.isDefending) {
+        addLogEntry(`${defender.name} уже использовал защиту в этом раунде`, 'system');
+        return null;
+    }
+
+    const defenseType = isRanged ? 'dodge' : confirm(`${defender.name}, выбрать Парирование? (OK — Парирование, Отмена — Уклонение)`) ? 'parry' : 'dodge';
+
+    let roll, target, success;
+    if (defenseType === 'dodge') {
+        const agBonus = Math.floor((defender.ag || 25) / 10);
+        const skill = defender.dodgeSkill || 0;
+        target = 20 + agBonus * 2 + skill;
+        roll = Math.floor(Math.random() * 100) + 1;
+        success = roll <= target;
+    } else {
+        const wsBonus = Math.floor((defender.ws || 25) / 10);
+        const skill = defender.parrySkill || 0;
+        target = 20 + wsBonus * 2 + skill;
+        roll = Math.floor(Math.random() * 100) + 1;
+        success = roll <= target;
+    }
+
+    await updateDoc(battleRef, {
+        [`characters.${defenderId}.reactions`]: defender.reactions - 1,
+        [`characters.${defenderId}.isDefending`]: true
+    });
+
+    const result = {
+        type: defenseType,
+        roll,
+        target,
+        success,
+        defender: defender.name,
+        attacker: attacker?.name || 'неизвестный'
+    };
+
+    addLogEntry(
+        `${defender.name} пытается ${defenseType === 'dodge' ? 'уклониться' : 'парировать'} (${roll}/${target}) — ${success ? '✅ УСПЕХ' : '❌ ПРОВАЛ'}`,
+        'system'
+    );
+
+    return result;
+}
+
+// ============================================================
+// 5.9. ПРИМЕНЕНИЕ УРОНА (С ЗАЩИТОЙ И ЛОГОМ HP)
+// ============================================================
+async function applyDamageWithDefense(battleId, charId, damage, attackResult = null) {
+    const battleRef = doc(db, 'battles', battleId);
+    const battleSnap = await getDoc(battleRef);
+    if (!battleSnap.exists()) return;
+
+    const data = battleSnap.data();
+    const char = data.characters[charId];
+    if (!char) return;
+    if (char.status === 'dead' || !char.isActive) return;
+
+    // Проверка защиты
+    let defenseResult = null;
+    if (char.reactions > 0 && !char.isDefending) {
+        const attackerId = attackResult?.attackerId || null;
+        const isRanged = attackResult?.isRanged || false;
+        defenseResult = await attemptDefense(battleId, charId, attackerId, isRanged);
+        if (defenseResult?.success) {
+            addLogEntry(`${char.name} защитился! Урон отменён.`, 'system');
+            return { wounds: char.wounds, status: char.status, isDead: false, defended: true };
+        }
+    }
+
+    let wounds = char.wounds - damage;
+    const isDead = wounds <= -char.maxWounds;
+
+    let conditions = char.conditions || [];
+    let status = char.status || 'alive';
+
+    if (isDead) {
+        status = 'dead';
+        char.isActive = false;
+    } else if (wounds <= 0 && char.status !== 'dead') {
+        status = 'critical';
+        if (!conditions.includes('bloodloss')) conditions.push('bloodloss');
+    }
+
+    const hpLog = char.hpLog || [];
+    hpLog.push({
+        time: new Date().toLocaleTimeString(),
+        delta: -damage,
+        current: wounds
+    });
+    if (hpLog.length > 10) hpLog.shift();
+
+    await updateDoc(battleRef, {
+        [`characters.${charId}.wounds`]: wounds,
+        [`characters.${charId}.status`]: status,
+        [`characters.${charId}.isActive`]: !isDead,
+        [`characters.${charId}.conditions`]: conditions,
+        [`characters.${charId}.hpLog`]: hpLog,
+        [`characters.${charId}.isDefending`]: false
+    });
+
+    if (attackResult) {
+        const logEntry = {
+            time: new Date().toLocaleTimeString(),
+            text: `${attackResult.attacker} → ${char.name}: ${attackResult.isSuccess ? 'ПОПАДАНИЕ' : 'ПРОМАХ'} (${attackResult.roll}/${attackResult.target})`,
+            damage: damage,
+            target: charId,
+            isDead: isDead
+        };
+        await addLog(battleId, logEntry);
+    }
+
+    return { wounds, status, isDead };
+}
+
+// ============================================================
+// 5.10. СБРОС РЕСУРСОВ В НАЧАЛЕ ХОДА
+// ============================================================
+async function resetResources(battleId, charId) {
+    const battleRef = doc(db, 'battles', battleId);
+    await updateDoc(battleRef, {
+        [`characters.${charId}.od`]: 2,
+        [`characters.${charId}.maxOd`]: 2,
+        [`characters.${charId}.reactions`]: 1,
+        [`characters.${charId}.maxReactions`]: 1,
+        [`characters.${charId}.isDefending`]: false
+    });
+}
+
+// ============================================================
+// 5.11. ТРАТА ОД
+// ============================================================
+async function spendOd(battleId, charId, amount = 1) {
+    const battleRef = doc(db, 'battles', battleId);
+    const battleSnap = await getDoc(battleRef);
+    if (!battleSnap.exists()) return false;
+
+    const char = battleSnap.data().characters[charId];
+    if (!char) return false;
+    if (char.od < amount) {
+        addLogEntry(`${char.name} не имеет достаточно ОД (${char.od}/${amount})`, 'system');
+        return false;
+    }
+
+    await updateDoc(battleRef, {
+        [`characters.${charId}.od`]: char.od - amount
+    });
+    return true;
+}
 // ============================================================
 // 6. ОБРАБОТЧИКИ ДОБАВЛЕНИЯ ПЕРСОНАЖЕЙ
 // ============================================================
