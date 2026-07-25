@@ -134,6 +134,30 @@
         .btn-roll:active {
             transform: scale(0.95);
         }
+
+        .status-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #2a2a3a;
+            color: #887777;
+            text-transform: uppercase;
+        }
+
+        .status-badge.alive {
+            background: #1a3a1a;
+            color: #66aa66;
+        }
+
+        .status-badge.critical {
+            background: #3a2a1a;
+            color: #ff8800;
+        }
+
+        .status-badge.dead {
+            background: #3a1a1a;
+            color: #cc4444;
+        }
     </style>
 </head>
 
@@ -230,11 +254,13 @@
 
                     <!-- Атакующий и цель -->
                     <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
-                        <select id="attacker-select" style="flex:1; min-width:120px;">
+                        <select id="attacker-select"
+                            style="flex:1; min-width:120px; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:6px; border-radius:4px;">
                             <option value="">Атакующий</option>
                         </select>
                         <span style="align-self:center;">➔</span>
-                        <select id="defender-select" style="flex:1; min-width:120px;">
+                        <select id="defender-select"
+                            style="flex:1; min-width:120px; background:#0a0808; border:1px solid var(--border-color); color:var(--text-light); padding:6px; border-radius:4px;">
                             <option value="">Цель</option>
                         </select>
                     </div>
@@ -313,6 +339,19 @@
                     <p><strong>Всего участников:</strong> <span id="total-combatants">0</span></p>
                     <p><strong>Активных:</strong> <span id="active-combatants">0</span></p>
                     <p><strong>Счётчик убийств:</strong> <span id="kill-counter">0</span></p>
+                </div>
+
+                <!-- Справка по Реакциям -->
+                <div
+                    style="margin-top:12px; background:var(--bg-card); border:1px solid var(--border-color); padding:12px; border-radius:4px;">
+                    <h4 style="margin-top:0; margin-bottom:8px; color:#ffcc44;">🛡️ Реакции</h4>
+                    <p style="font-size:13px; color:#887777; margin:0;">
+                        У каждого персонажа есть <strong style="color:#ffcc44;">1 Реакция</strong> за ход.
+                        Реакции восстанавливаются в начале хода персонажа.
+                        <br><br>
+                        <strong style="color:#66aa66;">Уклонение</strong> — проверка Agility<br>
+                        <strong style="color:#aa66cc;">Парирование</strong> — проверка Weapon Skill
+                    </p>
                 </div>
             </div>
         </div>

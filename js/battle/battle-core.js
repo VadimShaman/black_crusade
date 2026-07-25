@@ -1,4 +1,8 @@
 // js/battle/battle-core.js
+// ============================================================
+// ОСНОВНАЯ ЛОГИКА БОЯ
+// ============================================================
+
 import { db } from '../firebase-config.js';
 import {
     collection, doc, getDoc, addDoc, updateDoc, deleteDoc,
@@ -6,6 +10,7 @@ import {
     runTransaction, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { addLog, subscribeToLog } from './battle-log.js';
+import { resetReactions } from './battle-status.js';
 
 // ============================================================
 // 1. ШАБЛОНЫ NPC
@@ -19,7 +24,11 @@ export const NPC_TEMPLATES = {
         weapon: 'Ритуальный нож',
         traits: [],
         status: 'alive',
-        isNPC: true
+        isNPC: true,
+        reactions: 1,
+        maxReactions: 1,
+        od: 2,
+        maxOd: 2
     },
     beastman: {
         name: 'Зверолюд',
@@ -29,7 +38,11 @@ export const NPC_TEMPLATES = {
         weapon: 'Когти',
         traits: ['Мутант', 'Чувство крови'],
         status: 'alive',
-        isNPC: true
+        isNPC: true,
+        reactions: 1,
+        maxReactions: 1,
+        od: 2,
+        maxOd: 2
     },
     albino: {
         name: 'Шепчущий из Теней (Альбинос)',
@@ -40,7 +53,11 @@ export const NPC_TEMPLATES = {
         traits: ['Альбинос', 'Псайкер-Отродье', 'Метка Тзинча'],
         status: 'alive',
         isNPC: true,
-        isBoss: true
+        isBoss: true,
+        reactions: 1,
+        maxReactions: 1,
+        od: 2,
+        maxOd: 2
     },
     flamingPredator: {
         name: 'Пылающий Хищник (Отродье Кхорна)',
@@ -51,7 +68,11 @@ export const NPC_TEMPLATES = {
         traits: ['Отродье Кхорна', 'Пиромантия', 'Fear(4)', 'Regeneration(1d5)'],
         status: 'alive',
         isNPC: true,
-        isBoss: true
+        isBoss: true,
+        reactions: 1,
+        maxReactions: 1,
+        od: 2,
+        maxOd: 2
     },
     gregor: {
         name: 'Грегор Мясник',
@@ -61,7 +82,11 @@ export const NPC_TEMPLATES = {
         weapon: 'Мясницкий тесак',
         traits: ['Ветеран', 'Верность Колдуну', 'Кровавая Ярость'],
         status: 'alive',
-        isNPC: true
+        isNPC: true,
+        reactions: 1,
+        maxReactions: 1,
+        od: 2,
+        maxOd: 2
     }
 };
 
@@ -79,7 +104,8 @@ export async function createBattle(battleName = `Бой ${new Date().toLocaleTim
         currentPlayerId: null,
         characters: {},
         log: [],
-        isFinished: false
+        isFinished: false,
+        kills: 0
     };
     initialCharacters.forEach((char, index) => {
         const id = `char_${Date.now()}_${index}`;
@@ -88,7 +114,13 @@ export async function createBattle(battleName = `Бой ${new Date().toLocaleTim
             id: id,
             wounds: char.maxWounds || char.wounds || 10,
             conditions: [],
-            isActive: true
+            isActive: true,
+            reactions: 1,
+            maxReactions: 1,
+            od: 2,
+            maxOd: 2,
+            hpLog: [],
+            isDefending: false
         };
         battleData.turnOrder.push({ id, initiative: 0, name: char.name || 'Безымянный' });
     });
@@ -127,7 +159,13 @@ export async function addCharacter(battleId, character, playerName = 'Игрок
         conditions: [],
         isActive: true,
         playerName: playerName,
-        joinedAt: serverTimestamp()
+        joinedAt: serverTimestamp(),
+        reactions: 1,
+        maxReactions: 1,
+        od: 2,
+        maxOd: 2,
+        hpLog: [],
+        isDefending: false
     };
     await updateDoc(battleRef, {
         [`characters.${charId}`]: charData,
@@ -165,6 +203,11 @@ export async function rollInitiative(battleId) {
     }
 
     turnOrder.sort((a, b) => b.initiative - a.initiative);
+
+    // Сбрасываем Реакции первому персонажу
+    if (turnOrder.length > 0) {
+        await resetReactions(battleId, turnOrder[0].id);
+    }
 
     await updateDoc(battleRef, {
         turnOrder: turnOrder,
@@ -212,23 +255,29 @@ export async function nextTurn(battleId) {
         return;
     }
 
+    // Сбрасываем Реакции следующему персонажу
+    const nextId = turnOrder[nextIndex].id;
+    await resetReactions(battleId, nextId);
+
     await updateDoc(battleRef, {
         currentTurnIndex: nextIndex,
-        currentPlayerId: turnOrder[nextIndex].id,
+        currentPlayerId: nextId,
         turn: data.turn + 1
     });
 }
 
 // ============================================================
-// 7. КАЛЬКУЛЯТОР АТАКИ (импорт из battle-attack)
+// 7. КАЛЬКУЛЯТОР АТАКИ
 // ============================================================
 import { calculateAttack, performAttack } from './battle-attack.js';
+
 // ============================================================
-// 8. ЛОГ (импорт из battle-log)
+// 8. ЛОГ
 // ============================================================
 // import { addLog, subscribeToLog } from './battle-log.js';
+
 // ============================================================
-// 9. СТАТУСЫ (импорт из battle-status)
+// 9. СТАТУСЫ
 // ============================================================
 import { applyDamage, addCondition, removeCondition } from './battle-status.js';
 
