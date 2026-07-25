@@ -47,20 +47,6 @@
             text-decoration: line-through;
         }
 
-        .hp-bar {
-            background: #2a1a1a;
-            height: 6px;
-            border-radius: 3px;
-            margin-top: 4px;
-        }
-
-        .hp-fill {
-            background: var(--primary-red);
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.3s;
-        }
-
         .log-viewport {
             height: 300px;
             overflow-y: auto;
@@ -165,12 +151,30 @@
             margin-top: 8px;
         }
 
-        .round-controls .round-number {
+        .round-number {
             font-size: 20px;
             font-weight: bold;
             color: var(--accent-glow);
             min-width: 40px;
             text-align: center;
+        }
+
+        #defense-panel {
+            display: none;
+            margin-top: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
     </style>
 </head>
@@ -255,19 +259,18 @@
 
                 <!-- Управление раундами -->
                 <div
-                    style="display:flex; gap:8px; margin-bottom:12px; align-items:center; background:var(--bg-card); padding:10px; border-radius:4px; border:1px solid var(--border-color);">
+                    style="display:flex; gap:8px; margin-bottom:12px; align-items:center; background:var(--bg-card); padding:10px; border-radius:4px; border:1px solid var(--border-color); flex-wrap:wrap;">
                     <button class="tab-btn" id="prev-round-btn"
                         style="padding:4px 12px; background:#2a1a1a;">⬅️</button>
                     <span style="color:#887777; font-size:14px;">Раунд:</span>
-                    <span id="turn-display" class="round-number"
-                        style="font-size:20px; font-weight:bold; color:var(--accent-glow); min-width:40px; text-align:center;">0</span>
+                    <span id="turn-display" class="round-number">0</span>
                     <button class="tab-btn" id="next-round-btn"
                         style="padding:4px 12px; background:#1a2a1a;">➡️</button>
                     <span style="color:#554444; font-size:12px; margin-left:8px;">(ручное управление)</span>
                 </div>
 
                 <!-- Экспорт/импорт лога -->
-                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
                     <button class="tab-btn" id="export-log-btn" style="padding:4px 12px;">📥 Экспорт лога</button>
                     <button class="tab-btn" id="import-log-btn" style="padding:4px 12px;">📤 Импорт лога</button>
                     <input type="file" id="import-log-file" accept=".json" style="display:none;">
@@ -349,7 +352,7 @@
                 </div>
             </div>
 
-            <!-- ===== ПРАВАЯ КОЛОНКА: СТАТИСТИКА ===== -->
+            <!-- ===== ПРАВАЯ КОЛОНКА: СТАТИСТИКА + РЕАКЦИИ ===== -->
             <div>
                 <h3>📊 Статистика</h3>
                 <div
@@ -361,7 +364,7 @@
                     <p><strong>Счётчик убийств:</strong> <span id="kill-counter">0</span></p>
                 </div>
 
-                <!-- Очередь инициативы (отображается в отдельном окне) -->
+                <!-- Очередь инициативы -->
                 <div
                     style="margin-top:12px; background:var(--bg-card); border:1px solid var(--border-color); padding:12px; border-radius:4px;">
                     <h4 style="margin-top:0; margin-bottom:8px; color:#ffcc44;">📋 Очередь инициативы</h4>
@@ -369,6 +372,9 @@
                         <span style="color:#554444; font-size:13px;">Нет порядка инициативы</span>
                     </div>
                 </div>
+
+                <!-- Панель реакций (появляется при атаке) -->
+                <div id="defense-panel"></div>
 
                 <!-- Справка по Реакциям -->
                 <div

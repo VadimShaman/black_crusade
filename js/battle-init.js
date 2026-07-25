@@ -18,10 +18,10 @@ const state = {
     battleId: null,
     battleData: null,
     unsubscribe: null,
-    pendingAttack: null // Для хранения данных атаки
+    pendingAttack: null, // Хранит данные последней атаки
+    defenseResolve: null // Функция для разрешения реакции
 };
 
-// Получаем ID боя из URL
 const params = new URLSearchParams(window.location.search);
 state.battleId = params.get('id');
 
@@ -49,14 +49,13 @@ const killCounter = $('kill-counter');
 const battleTitle = $('battle-title');
 const battleIdDisplay = $('battle-id-display');
 const attackResult = $('attack-result');
+const initOrderDisplay = $('init-order-display');
+const defensePanel = $('defense-panel');
 
 // ============================================================
 // 3. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 
-/**
- * Добавляет запись в лог боя
- */
 function addLogEntry(text, type = 'system') {
     if (!logContainer) return;
     const entry = document.createElement('div');
@@ -67,9 +66,6 @@ function addLogEntry(text, type = 'system') {
     logContainer.scrollTop = logContainer.scrollHeight;
 }
 
-/**
- * Обновляет список участников
- */
 function updateCombatants(data) {
     if (!combatantsList) return;
     const chars = data.characters || {};
@@ -100,6 +96,7 @@ function updateCombatants(data) {
     }
 
     updateInitSelect();
+    updateInitOrderDisplay(data);
 
     if (entries.length === 0) {
         combatantsList.innerHTML = '<div style="color:#554444; text-align:center; padding:20px;">Нет участников</div>';
@@ -183,7 +180,6 @@ state.unsubscribe = onSnapshot(battleRef, (snapshot) => {
 
     updateCombatants(data);
 
-    // Отображаем лог
     if (data.log && data.log.length > 0 && logContainer) {
         logContainer.innerHTML = '';
         data.log.forEach(entry => {
@@ -466,7 +462,7 @@ function openEditForm(charId, charData) {
 }
 
 // ============================================================
-// 5.8. ЗАЩИТА (УКЛОНЕНИЕ / ПАРИРОВАНИЕ)
+// 5.6. ЗАЩИТА (УКЛОНЕНИЕ / ПАРИРОВАНИЕ)
 // ============================================================
 async function attemptDefense(battleId, defenderId, attackerId, defenseType) {
     const battleRef = doc(db, 'battles', battleId);
@@ -487,14 +483,12 @@ async function attemptDefense(battleId, defenderId, attackerId, defenseType) {
 
     let roll, target, success;
     if (defenseType === 'dodge') {
-        // Уклонение: AgBonus * 2 + навык - 20 (без навыка)
         const agBonus = Math.floor((defender.ag || 25) / 10);
         const skill = defender.dodgeSkill || 0;
         target = 20 + agBonus * 2 + skill - (skill === 0 ? 20 : 0);
         roll = Math.floor(Math.random() * 100) + 1;
         success = roll <= target;
     } else if (defenseType === 'parry') {
-        // Парирование: WSBonus * 2 + навык - 20 (без навыка)
         const wsBonus = Math.floor((defender.ws || 25) / 10);
         const skill = defender.parrySkill || 0;
         target = 20 + wsBonus * 2 + skill - (skill === 0 ? 20 : 0);
@@ -529,108 +523,78 @@ async function attemptDefense(battleId, defenderId, attackerId, defenseType) {
 }
 
 // ============================================================
-// 5.9. ПОКАЗ МОДАЛЬНОГО ОКНА РЕАКЦИИ (ОТДЕЛЬНОЕ ОКНО)
+// 5.7. ПОКАЗ ПАНЕЛИ РЕАКЦИЙ (СПРАВА)
 // ============================================================
-function showDefenseModal(defender, attacker, attackData) {
-    return new Promise((resolve) => {
-        // Создаём затемнение
-        const overlay = document.createElement('div');
-        overlay.id = 'defense-modal-overlay';
-        overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;
-            z-index: 9999; backdrop-filter: blur(4px);
-        `;
+function showDefensePanel(defender, attacker, attackData) {
+    if (!defensePanel) return;
 
-        // Модальное окно
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            background: #141010; border: 2px solid #cc3300; border-radius: 8px;
-            padding: 30px; max-width: 550px; width: 90%;
-            box-shadow: 0 0 60px rgba(204, 51, 0, 0.3);
-            max-height: 90vh;
-            overflow-y: auto;
-        `;
+    const agBonus = Math.floor((defender.ag || 25) / 10);
+    const wsBonus = Math.floor((defender.ws || 25) / 10);
+    const dodgeChance = 20 + agBonus * 2 + (defender.dodgeSkill || 0) - ((defender.dodgeSkill || 0) === 0 ? 20 : 0);
+    const parryChance = 20 + wsBonus * 2 + (defender.parrySkill || 0) - ((defender.parrySkill || 0) === 0 ? 20 : 0);
 
-        // Расчёт шансов
-        const agBonus = Math.floor((defender.ag || 25) / 10);
-        const wsBonus = Math.floor((defender.ws || 25) / 10);
-        const dodgeChance = 20 + agBonus * 2 + (defender.dodgeSkill || 0) - ((defender.dodgeSkill || 0) === 0 ? 20 : 0);
-        const parryChance = 20 + wsBonus * 2 + (defender.parrySkill || 0) - ((defender.parrySkill || 0) === 0 ? 20 : 0);
-
-        modal.innerHTML = `
-            <h3 style="color: #cc3300; margin-top: 0; font-family: var(--font-mono);">
-                🛡️ ${defender.name} под атакой!
-            </h3>
-            <div style="background: #0a0808; padding: 12px; border-radius: 4px; margin: 12px 0; border-left: 3px solid #cc3300;">
+    defensePanel.style.display = 'block';
+    defensePanel.innerHTML = `
+        <div style="background: var(--bg-card); border: 2px solid #cc3300; border-radius: 4px; padding: 16px;">
+            <h4 style="color: #cc3300; margin-top: 0;">🛡️ ${defender.name} под атакой!</h4>
+            <div style="background: #0a0808; padding: 10px; border-radius: 4px; margin: 8px 0; border-left: 3px solid #cc3300;">
                 <div><strong>Атакующий:</strong> ${attacker?.name || 'Противник'}</div>
                 <div><strong>Оружие:</strong> ${attackData.weapon || 'Неизвестно'}</div>
                 <div><strong>Бросок атаки:</strong> ${attackData.roll}/${attackData.target} ${attackData.isSuccess ? '✅' : '❌'}</div>
-                <div><strong>Предварительный урон:</strong> ${attackData.rawDamage || 0}</div>
+                <div><strong>Урон до брони:</strong> ${attackData.rawDamage || 0}</div>
+                <div><strong>Реакций:</strong> <span style="color: #ffcc44;">${defender.reactions || 0}</span></div>
             </div>
-            <p style="color: #887777; font-size: 14px;">
-                У вас есть <strong style="color: #ffcc44;">${defender.reactions || 0}</strong> Реакций.
-            </p>
-            <div style="display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap;">
-                <button id="defense-dodge-btn" style="flex: 1; padding: 14px; background: #1a2a3a; border: 1px solid #3a5a7a;
-                        color: #d4c8c8; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;
-                        min-width: 120px;">
-                    🏃 Уклониться<br>
-                    <span style="font-size: 11px; color: #887777;">${dodgeChance}%</span>
+            <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                <button id="defense-dodge-btn" class="tab-btn" style="flex:1; background: #1a2a3a; border-color: #3a5a7a;">
+                    🏃 Уклониться (${dodgeChance}%)
                 </button>
-                <button id="defense-parry-btn" style="flex: 1; padding: 14px; background: #2a1a3a; border: 1px solid #5a3a7a;
-                        color: #d4c8c8; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;
-                        min-width: 120px;">
-                    ⚔️ Парировать<br>
-                    <span style="font-size: 11px; color: #887777;">${parryChance}%</span>
+                <button id="defense-parry-btn" class="tab-btn" style="flex:1; background: #2a1a3a; border-color: #5a3a7a;">
+                    ⚔️ Парировать (${parryChance}%)
                 </button>
-                <button id="defense-skip-btn" style="flex: 1; padding: 14px; background: #2a1a1a; border: 1px solid #5a2a2a;
-                        color: #887777; border-radius: 4px; cursor: pointer; font-size: 14px;
-                        min-width: 120px;">
+                <button id="defense-skip-btn" class="tab-btn" style="flex:1; background: #2a1a1a; border-color: #5a2a2a;">
                     ❌ Пропустить
                 </button>
             </div>
-            <div style="font-size: 12px; color: #554444; border-top: 1px solid #2a1a1a; padding-top: 12px;">
-                ⚡ Реакция тратится при попытке защиты (даже при провале)<br>
-                🔄 Реакция восстанавливается в начале вашего хода
+            <div style="font-size: 11px; color: #554444; margin-top: 8px; border-top: 1px solid #2a1a1a; padding-top: 8px;">
+                ⚡ Реакция тратится при попытке защиты (даже при провале)
                 ${(defender.dodgeSkill || 0) === 0 ? '<br>⚠️ Без навыка Уклонения штраф -20' : ''}
                 ${(defender.parrySkill || 0) === 0 ? '<br>⚠️ Без навыка Парирования штраф -20' : ''}
             </div>
-        `;
+        </div>
+    `;
 
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
+    return new Promise((resolve) => {
+        // Сохраняем resolve для использования в обработчиках
+        state.defenseResolve = resolve;
 
         // Обработчики кнопок
-        modal.querySelector('#defense-dodge-btn').addEventListener('click', () => {
-            overlay.remove();
-            resolve('dodge');
+        defensePanel.querySelector('#defense-dodge-btn').addEventListener('click', () => {
+            defensePanel.style.display = 'none';
+            state.defenseResolve('dodge');
+            state.defenseResolve = null;
         });
-        modal.querySelector('#defense-parry-btn').addEventListener('click', () => {
-            overlay.remove();
-            resolve('parry');
+        defensePanel.querySelector('#defense-parry-btn').addEventListener('click', () => {
+            defensePanel.style.display = 'none';
+            state.defenseResolve('parry');
+            state.defenseResolve = null;
         });
-        modal.querySelector('#defense-skip-btn').addEventListener('click', () => {
-            overlay.remove();
-            resolve(null);
+        defensePanel.querySelector('#defense-skip-btn').addEventListener('click', () => {
+            defensePanel.style.display = 'none';
+            state.defenseResolve(null);
+            state.defenseResolve = null;
         });
-
-        // Закрытие по клику вне модалки
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.remove();
-                resolve(null);
-            }
-        });
-
-        // Авто-закрытие через 30 секунд
-        setTimeout(() => {
-            if (document.body.contains(overlay)) {
-                overlay.remove();
-                resolve(null);
-            }
-        }, 30000);
     });
+}
+
+function hideDefensePanel() {
+    if (defensePanel) {
+        defensePanel.style.display = 'none';
+        defensePanel.innerHTML = '';
+    }
+    if (state.defenseResolve) {
+        state.defenseResolve(null);
+        state.defenseResolve = null;
+    }
 }
 
 // ============================================================
@@ -799,6 +763,7 @@ document.getElementById('init-apply-btn')?.addEventListener('click', async () =>
         addLogEntry(`⚡ Инициатива применена: ${turnOrder.map((t, i) => `${i + 1}. ${t.name} (${t.initiative})`).join(' → ')}`, 'system');
         initQueue.length = 0;
         renderInitQueue();
+        updateInitOrderDisplay({ turnOrder: turnOrder });
     } catch (err) {
         console.error(err);
         alert('Ошибка применения инициативы: ' + err.message);
@@ -842,20 +807,36 @@ function renderInitQueue() {
     });
 }
 
+function updateInitOrderDisplay(data) {
+    if (!initOrderDisplay) return;
+    const turnOrder = data?.turnOrder || state.battleData?.turnOrder || [];
+    if (turnOrder.length === 0) {
+        initOrderDisplay.innerHTML = '<span style="color:#554444; font-size:13px;">Нет порядка инициативы</span>';
+        return;
+    }
+    const currentIndex = data?.currentTurnIndex || state.battleData?.currentTurnIndex || 0;
+    initOrderDisplay.innerHTML = turnOrder.map((item, index) => {
+        const isCurrent = index === currentIndex;
+        const isDead = state.battleData?.characters?.[item.id]?.status === 'dead';
+        return `<div style="display:flex; justify-content:space-between; padding:4px 8px; border-bottom:1px solid rgba(255,255,255,0.05); 
+                    ${isCurrent ? 'background: rgba(204, 51, 0, 0.15); border-left: 3px solid #cc3300;' : ''}
+                    ${isDead ? 'opacity: 0.3; text-decoration: line-through;' : ''}">
+            <span>${isCurrent ? '▶️' : ''} <strong>${item.name}</strong></span>
+            <span style="color: #ffcc44;">${item.initiative}</span>
+        </div>`;
+    }).join('');
+}
+
 // ============================================================
-// 8. ПЕРЕКЛЮЧЕНИЕ РАУНДОВ (РУЧНОЕ)
+// 8. УПРАВЛЕНИЕ РАУНДАМИ
 // ============================================================
 
-// Ручное увеличение раунда
 document.getElementById('next-round-btn')?.addEventListener('click', async () => {
     try {
         const data = state.battleData;
         if (!data) return;
-
         const currentRound = data.turn || 0;
-        await updateDoc(battleRef, {
-            turn: currentRound + 1
-        });
+        await updateDoc(battleRef, { turn: currentRound + 1 });
         addLogEntry(`🔁 Раунд ${currentRound + 1} начался`, 'system');
     } catch (err) {
         console.error(err);
@@ -863,20 +844,16 @@ document.getElementById('next-round-btn')?.addEventListener('click', async () =>
     }
 });
 
-// Ручное уменьшение раунда
 document.getElementById('prev-round-btn')?.addEventListener('click', async () => {
     try {
         const data = state.battleData;
         if (!data) return;
-
         const currentRound = data.turn || 0;
         if (currentRound <= 0) {
             alert('Нельзя уменьшить раунд ниже 0');
             return;
         }
-        await updateDoc(battleRef, {
-            turn: currentRound - 1
-        });
+        await updateDoc(battleRef, { turn: currentRound - 1 });
         addLogEntry(`⬅️ Раунд ${currentRound - 1}`, 'system');
     } catch (err) {
         console.error(err);
@@ -924,6 +901,7 @@ document.getElementById('next-turn-btn')?.addEventListener('click', async () => 
             currentPlayerId: nextId
         });
         addLogEntry(`⏩ Ход передан участнику ${turnOrder[nextIndex].name} (Реакции восстановлены)`, 'system');
+        updateInitOrderDisplay({ turnOrder: turnOrder, currentTurnIndex: nextIndex });
     } catch (err) {
         console.error(err);
         addLogEntry(`❌ Ошибка перехода хода: ${err.message}`, 'system');
@@ -969,6 +947,7 @@ document.getElementById('prev-turn-btn')?.addEventListener('click', async () => 
         });
 
         addLogEntry(`⬅️ Возврат к ходу участника ${turnOrder[prevIndex].name}`, 'system');
+        updateInitOrderDisplay({ turnOrder: turnOrder, currentTurnIndex: prevIndex });
     } catch (err) {
         console.error(err);
         alert('Ошибка: ' + err.message);
@@ -995,10 +974,14 @@ document.getElementById('end-battle-btn')?.addEventListener('click', async () =>
 });
 
 // ============================================================
-// 9. АТАКА (С РЕАКЦИЕЙ ДЛЯ ЦЕЛИ)
+// 9. АТАКА (С ПАНЕЛЬЮ РЕАКЦИЙ СПРАВА)
 // ============================================================
 document.getElementById('attack-btn')?.addEventListener('click', async () => {
     console.log('💥 Атака нажата');
+
+    // Скрываем старую панель реакций
+    hideDefensePanel();
+
     const attackerId = document.getElementById('attacker-select')?.value;
     const defenderId = document.getElementById('defender-select')?.value;
     const weaponName = document.getElementById('weapon-name-input')?.value || 'Кулак';
@@ -1032,7 +1015,7 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
         const degrees = isSuccess ? Math.floor((target - roll) / 10) + 1 : Math.floor((roll - target) / 10) + 1;
         const hitLocation = ['Голова', 'Правая рука', 'Левая рука', 'Торс', 'Правая нога', 'Левая нога'][Math.floor(Math.random() * 6)];
 
-        // ===== ШАГ 2: ПРЕДВАРИТЕЛЬНЫЙ РАСЧЁТ УРОНА =====
+        // ===== ШАГ 2: РАСЧЁТ УРОНА =====
         let rawDamage = 0;
         let damageRolls = [];
         if (isSuccess) {
@@ -1058,12 +1041,28 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
             }
         }
 
-        // ===== ШАГ 3: ВЫЗОВ РЕАКЦИИ (ТОЛЬКО ДЛЯ ЦЕЛИ) =====
-        let defenseResult = null;
+        // ===== ШАГ 3: ПОКАЗ РЕЗУЛЬТАТА АТАКИ =====
+        const resultDiv = document.getElementById('attack-result');
+        if (resultDiv) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div><strong>${attacker.name}</strong> → <strong>${defender.name}</strong></div>
+                <div>⚔️ ${weaponName}</div>
+                <div>🎯 Бросок: ${roll} (Цель: ${target}) ${isSuccess ? '✅ ПОПАДАНИЕ' : '❌ ПРОМАХ'}</div>
+                <div>📊 Уровней успеха: ${isSuccess ? '+' : ''}${degrees}</div>
+                <div>🎯 Место попадания: ${hitLocation}</div>
+                <div>🎲 Урон до брони: ${isSuccess ? rawDamage : 'промах'}</div>
+                ${damageRolls.length > 0 ? `<div>🎲 Броски: [${damageRolls.join(', ')}]</div>` : ''}
+                ${isSuccess && rawDamage > 0 ? `<div style="color:#ff8800; margin-top:8px;">🛡️ Ожидание реакции защиты...</div>` : ''}
+                ${!isSuccess ? '<div style="color:#887777;">❌ Промах</div>' : ''}
+            `;
+        }
+
+        // ===== ШАГ 4: ЕСЛИ ПОПАДАНИЕ — ПОКАЗЫВАЕМ ПАНЕЛЬ РЕАКЦИЙ =====
         let finalDamage = 0;
+        let defenseResult = null;
 
         if (isSuccess && rawDamage > 0 && defender.reactions > 0 && !defender.isDefending) {
-            // Показываем модальное окно ТОЛЬКО защищающемуся
             const attackData = {
                 weapon: weaponName,
                 roll: roll,
@@ -1073,7 +1072,8 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
                 attacker: attacker.name
             };
 
-            const defenseType = await showDefenseModal(defender, attacker, attackData);
+            // Показываем панель реакций справа
+            const defenseType = await showDefensePanel(defender, attacker, attackData);
 
             if (defenseType) {
                 defenseResult = await attemptDefense(state.battleId, defenderId, attackerId, defenseType);
@@ -1091,7 +1091,7 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
                     finalDamage = Math.max(0, rawDamage - armorValue);
                 }
             } else {
-                addLogEntry(`${defender.name} пропускает защиту.`, 'system');
+                // Пропустили защиту
                 const armor = defender.armor || { head: 0, body: 0, arms: 0, legs: 0 };
                 const armorKey = hitLocation === 'Голова' ? 'head' :
                     hitLocation === 'Торс' ? 'body' :
@@ -1111,7 +1111,7 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
             finalDamage = Math.max(0, rawDamage - armorValue);
         }
 
-        // ===== ШАГ 4: ПРИМЕНЕНИЕ УРОНА =====
+        // ===== ШАГ 5: ПРИМЕНЕНИЕ УРОНА =====
         if (isSuccess && finalDamage > 0) {
             await applyDamage(state.battleId, defenderId, finalDamage, {
                 attacker: attacker.name,
@@ -1122,15 +1122,10 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
             });
         } else if (isSuccess && finalDamage <= 0 && rawDamage > 0) {
             addLogEntry(`${attacker.name} атакует ${defender.name} — Урон поглощён броней!`, 'system');
-        } else if (!isSuccess) {
-            addLogEntry(`${attacker.name} промахивается по ${defender.name} (${roll}/${target})`, 'system');
         }
 
-        // ===== ШАГ 5: ВЫВОД РЕЗУЛЬТАТА =====
-        const resultDiv = document.getElementById('attack-result');
+        // ===== ШАГ 6: ОБНОВЛЕНИЕ РЕЗУЛЬТАТА =====
         if (resultDiv) {
-            resultDiv.style.display = 'block';
-
             let defenseText = '';
             if (defenseResult?.success) {
                 defenseText = `<div style="color:#66aa66;">🛡️ ${defender.name} ${defenseResult.type === 'dodge' ? 'уклонился' : 'парировал'}!</div>`;
@@ -1144,7 +1139,7 @@ document.getElementById('attack-btn')?.addEventListener('click', async () => {
                 <div>🎯 Бросок: ${roll} (Цель: ${target}) ${isSuccess ? '✅' : '❌'}</div>
                 <div>📊 Уровней успеха: ${isSuccess ? '+' : ''}${degrees}</div>
                 <div>🎯 Место попадания: ${hitLocation}</div>
-                <div>🎲 Кубы: ${damageDice} → ${isSuccess ? rawDamage : 'промах'}</div>
+                <div>🎲 Урон до брони: ${isSuccess ? rawDamage : 'промах'}</div>
                 ${damageRolls.length > 0 ? `<div>🎲 Броски: [${damageRolls.join(', ')}]</div>` : ''}
                 ${defenseText}
                 ${isSuccess && finalDamage > 0 ? `<div style="color:#cc4444; font-weight:bold;">💥 Итоговый урон: ${finalDamage}</div>` : ''}
